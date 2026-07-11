@@ -1,12 +1,84 @@
 ---
-- name: Import repo_influxdata_task.yml
-  ansible.builtin.include_tasks: repo_influxdata_task.yml
+# Configure Telegraf node agent and push to VictoriaMetrics.
+# Include from a play that sets become: true and gather_facts: true
+# (facts virtualization_role + ipmi are required by the template).
 
-- name: Install influxdb2 EL9
-  ansible.builtin.dnf:
-    name:
-      - telegraf
+- name: Import pkg_telegraf_task.yml
+  ansible.builtin.include_tasks: pkg_telegraf_task.yml
+
+- name: Find stray telegraf.d sample configs (they merge and can duplicate inputs)
+  ansible.builtin.find:
+    paths: /etc/telegraf/telegraf.d
+    patterns: "*.conf"
+  register: tg_dropins
+  tags: telegraf_cfg
+
+- name: Warn about stray telegraf.d configs
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: {{ tg_dropins.files | map(attribute='path') | list }}
+      will be merged with telegraf.conf. Remove or review them.
+  when: tg_dropins.matched | int > 0
+  tags: telegraf_cfg
+
+- name: Create systemd drop-in dir for telegraf
+  ansible.builtin.file:
+    path: /etc/systemd/system/telegraf.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags: telegraf_cfg
+
+- name: Run telegraf as root (override packaged User=telegraf)
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/telegraf.service.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Service]
+      User=root
+      Group=root
+  register: tg_override
+  tags: telegraf_cfg
+
+- name: Load ipmi_devintf so /dev/ipmi0 exists (physical + BMC hosts)
+  community.general.modprobe:
+    name: ipmi_devintf
     state: present
-    enablerepo: "influxdata"
-  when: ( ansible_facts['distribution'] == 'AlmaLinux' and ( ansible_facts['distribution_major_version'] | int  > 7 ) ) or ansible_facts['distribution'] == 'Fedora'
-  tags: packages
+    persistent: present
+  when:
+    - ansible_facts['virtualization_role'] != 'guest'
+    - ansible_facts['ipmi'] | default(false) | bool
+  tags: telegraf_cfg
+
+- name: Deploy NFS server parser (nfs hosts only)
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../additions/nfs/nfsd_stats.awk"
+    dest: /usr/local/bin/nfsd_stats.awk
+    owner: root
+    group: root
+    mode: "0755"
+  when: telegraf_nfs | default(false)
+  tags: telegraf_cfg
+
+- name: Template telegraf.conf
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/../additions/telegraf/telegraf.conf.j2"
+    dest: /etc/telegraf/telegraf.conf
+    owner: root
+    group: root
+    mode: "0640"
+    validate: "telegraf --test --config %s > /dev/null"
+  register: tg_conf
+  tags: telegraf_cfg
+
+- name: Enable and (re)start telegraf
+  ansible.builtin.systemd:
+    name: telegraf
+    enabled: true
+    state: "{{ 'restarted' if (tg_conf is changed or tg_override is changed) else 'started' }}"
+    daemon_reload: true
+  tags: telegraf_cfg
+

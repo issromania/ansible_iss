@@ -1,0 +1,9 @@
+# group_vars/nfs_metrics.yml
+# Membership of the `nfs_metrics` inventory group turns on NFS server stats.
+# Put your two NFS servers in that group in the inventory, e.g.:
+#
+#   [nfs_metrics]
+#   nfsserver01.spacescience.ro
+#   nfsserver02.spacescience.ro
+telegraf_nfs: true
+

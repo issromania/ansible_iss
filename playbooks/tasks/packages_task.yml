@@ -1,10 +1,30 @@
 ---
-- name: Install packages
-  ansible.builtin.yum:
-    name: "{{ pkg_name }}"
-    state: present
-    update_cache: false
-  loop_control:
-    loop_var: pkg_name
-  loop: "{{ package_list }}"
+# This play runs with gather_facts: False and relies on cached facts.
+# On a host whose facts aren't cached yet (new host, flushed/evicted redis),
+# os_family is undefined and the branches below would fail fatally. Gather the
+# minimal subset only when it's actually missing . skips on warm cache.
+- name: Ensure distribution facts are available
+  ansible.builtin.setup:
+    gather_subset:
+      - min
+  when: "'os_family' not in ansible_facts"
   tags: packages
+
+- name: Install packages (RedHat family . AlmaLinux 9/10, Fedora)
+  ansible.builtin.dnf:
+    name: "{{ package_list }}"
+    state: present
+    update_cache: true
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: packages
+
+- name: Install packages (Debian family . Ubuntu)
+  ansible.builtin.apt:
+    name: "{{ package_list }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+    # install_recommends: false   # uncomment on HPC to avoid recommends bloat
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: packages
+

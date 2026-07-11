@@ -1,0 +1,98 @@
+{#- ==========================================================================
+    telegraf.conf.j2  —  MANAGED BY ANSIBLE, do not edit on the host
+    Fact-driven switches:
+      is_virtual      : true on KVM/VMware guests
+      telegraf_smart  : true on physical hosts (SMART body deferred)
+      telegraf_ipmi   : true on physical hosts exposing a BMC (ansible_ipmi fact)
+      telegraf_nfs    : inventory-set (group nfs_metrics) -> NFS server stats
+   ========================================================================== -#}
+{% set is_virtual     = ansible_facts['virtualization_role'] == 'guest' %}
+{% set telegraf_smart = ansible_facts['virtualization_role'] != 'guest' %}
+{% set telegraf_ipmi  = ansible_facts['ipmi'] | default(false) | bool %}
+{% set telegraf_nfs   = telegraf_nfs | default(false) %}
+# host role: {{ 'VIRTUAL' if is_virtual else 'PHYSICAL' }}{% if telegraf_ipmi %} + IPMI{% endif %}{% if telegraf_nfs %} + NFS-server{% endif %}
+
+
+[agent]
+  interval = "60s"
+  round_interval = true
+  collection_jitter = "0s"
+  flush_interval = "20s"
+  flush_jitter = "20s"
+  metric_buffer_limit = 10000
+  omit_hostname = false
+
+[[outputs.influxdb]]
+  urls = ["http://46.243.114.227:8428"]
+  content_encoding = "gzip"
+  skip_database_creation = true
+  exclude_retention_policy_tag = true
+
+########## always-on (VM and physical) ##########
+
+[[inputs.cpu]]
+  percpu = false            # aggregate only — percpu on 128-core EPYC would explode cardinality
+  totalcpu = true
+  collect_cpu_time = false
+  report_active = true
+
+[[inputs.mem]]
+
+[[inputs.swap]]
+
+[[inputs.system]]
+
+[[inputs.kernel]]
+
+[[inputs.processes]]
+
+[[inputs.disk]]
+  ignore_fs = ["tmpfs","devtmpfs","devfs","iso9660","overlay","aufs","squashfs","autofs","nsfs","cvmfs2"]
+
+[[inputs.diskio]]
+
+[[inputs.net]]
+  # interface bytes/packets + err_in/err_out + drop_in/drop_out.
+  # This is the reliable throughput source, incl. NFS-server transfer volume
+  # (nfsd io counters are 32-bit and wrap at 4 GiB — see inputs.exec below).
+
+[[inputs.nstat]]
+  # TCP/IP stack counters: retransmits + errors.
+  # Field names vary by kernel — run `telegraf --test` and tighten these globs
+  # to what your hosts actually emit.
+  proc_net_netstat = "/proc/net/netstat"
+  proc_net_snmp = "/proc/net/snmp"
+  dump_zeros = true
+  fieldpass = ["*RetransSegs*","*Retrans*","*InErrs*","*OutRsts*","*Errors*","*Timeouts*","*Drop*"]
+
+[[inputs.systemd_units]]
+  # service health for future absent()/state alerting (active_code != 0 => not running).
+  # scope with `pattern` later if per-service cardinality grows too large.
+
+{% if telegraf_nfs %}
+########## NFS server stats (this host only) ##########
+[[inputs.exec]]
+  commands = ["/usr/bin/awk -f /usr/local/bin/nfsd_stats.awk /proc/net/rpc/nfsd"]
+  timeout = "5s"
+  data_format = "influx"
+{% endif %}
+{% if not is_virtual %}
+########## physical-only ##########
+{% if telegraf_ipmi %}
+[[inputs.ipmi_sensor]]
+  # no `servers` => local in-band BMC (KCS). Runs as root; reads /dev/ipmi0 directly.
+  timeout = "20s"
+  # tagpass MUST be the last thing in this block (TOML parsing quirk).
+  # Validated against fleet SDR names:
+  #   Supermicro: PS1/PS2 Status  -> ps1_status  (ps[0-9]*_status)
+  #   Aivres:     PSU0/PSU1_Status -> psu0_status (psu[0-9]*_status)
+  [inputs.ipmi_sensor.tagpass]
+    name = ["cpu*_temp","system_temp","peripheral_temp","gpu*_temp","ps[0-9]*_status","psu[0-9]*_status"]
+{% endif %}
+{% if telegraf_smart %}
+# SMART (storage temperature) — plugin body deferred to the dedicated SMART session.
+# Gate is fact-driven (physical only); body to be added after device-enumeration is sorted.
+# [[inputs.smart]]
+#   attributes = false        # device-summary incl. temperature only
+{% endif %}
+{% endif %}

@@ -1,0 +1,23 @@
+---
+- name: Install cpu-power-apply script
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../additions/root_bin/cpu-power-apply"
+    dest: /root/bin/cpu-power-apply
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Install cpu_power_mgr cron.d entry
+  ansible.builtin.copy:
+    dest: /etc/cron.d/cpu_power_mgr
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      # CPU power profile manager . flip governor/EPP from Slurm CPUAlloc every minute.
+      # Managed by Ansible (adriansev/ansible_iss). Do not edit by hand.
+      SHELL=/bin/bash
+      PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      MAILTO=""
+      * * * * * root /root/bin/cpu-power-apply auto >/dev/null 2>&1
+

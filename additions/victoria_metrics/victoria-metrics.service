@@ -1,0 +1,28 @@
+[Unit]
+Description=VictoriaMetrics single-node TSDB
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=victoriametrics
+Group=victoriametrics
+EnvironmentFile=/etc/sysconfig/victoria-metrics
+ExecStart=/usr/local/bin/victoria-metrics-prod $VM_OPTS
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=1048576
+# --- hardening (NIS2-oriented, SELinux-compatible) ---
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=false          # MUST be false while data is under /home/mon_metrics
+ReadWritePaths=/home/mon_metrics
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target
+

@@ -253,7 +253,7 @@ package_list:
   - clang-libs.x86_64
   - clang-devel.x86_64
   - clang-tools-extra.x86_64
-  - clang-analyzer.noarch
+  - clang-analyzer
   - git-clang-format.x86_64
   - python3-clang.x86_64
   - rust-toolset.noarch
@@ -379,7 +379,6 @@ package_list:
   - root-core.x86_64
   - root-fftw.x86_64
   - root-foam.x86_64
-  - root-fonts.noarch
   - root-fumili.x86_64
   - root-gdml.x86_64
   - root-genetic.x86_64
@@ -413,18 +412,16 @@ package_list:
   - root-gui-fitpanelv7.x86_64
   - root-gui-ged.x86_64
   - root-gui-html.x86_64
-  - root-gui-qt5webdisplay.x86_64
   - root-gui-qt6webdisplay.x86_64
   - root-gui-recorder.x86_64
   - root-gui-webdisplay.x86_64
   - root-gui-webgui6.x86_64
   - root-hbook.x86_64
   - root-hist.x86_64
-  - root-hist-draw.x86_64
   - root-hist-factory.x86_64
   - root-hist-painter.x86_64
   - root-histv7.x86_64
-  - root-html.x86_64
+  - root-histv7util.x86_64
   - root-icons.noarch
   - root-io.x86_64
   - root-io-dcache.x86_64
@@ -448,10 +445,6 @@ package_list:
   - root-net-httpsniff.x86_64
   - root-net-rpdutils.x86_64
   - root-physics.x86_64
-  - root-proof.x86_64
-  - root-proof-bench.x86_64
-  - root-proof-player.x86_64
-  - root-proof-sessionviewer.x86_64
   - root-quadp.x86_64
   - root-r.x86_64
   - root-r-tools.x86_64
@@ -466,9 +459,6 @@ package_list:
   - root-spectrum.x86_64
   - root-spectrum-painter.x86_64
   - root-splot.x86_64
-  - root-sql-mysql.x86_64
-  - root-sql-odbc.x86_64
-  - root-sql-pgsql.x86_64
   - root-sql-sqlite.x86_64
   - root-testsupport.x86_64
   - root-tmva.x86_64
@@ -491,7 +481,7 @@ package_list:
   - root-vecops.x86_64
   - root-xroofit.x86_64
   - python3-root.x86_64
-  - python3-jupyroot.noarch
+  - python3-root+jupyroot.x86_64
   - openmpi.x86_64
   - openmpi-devel.x86_64
   - mpich.x86_64

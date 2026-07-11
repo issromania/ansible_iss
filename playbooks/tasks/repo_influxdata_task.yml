@@ -1,5 +1,7 @@
 ---
-- name: Influxdata repo install
+# Configure the InfluxData stable repository (EL + Debian/Ubuntu families).
+# Uses the current (post-2023) influxdata-archive.key.
+- name: Influxdata repo (EL . AlmaLinux 9/10)
   ansible.builtin.yum_repository:
     name: influxdata
     description: InfluxData Repository - Stable
@@ -11,6 +13,47 @@
     state: present
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
+  when: ansible_facts['os_family'] == 'RedHat'
   tags: repo
-  ignore_errors: true
+
+- name: Ensure apt keyring dir exists (Debian/Ubuntu)
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: repo
+
+- name: Fetch Influxdata signing key (Debian/Ubuntu)
+  ansible.builtin.get_url:
+    url: https://repos.influxdata.com/influxdata-archive.key
+    dest: /etc/apt/keyrings/influxdata-archive.key
+    mode: "0644"
+    owner: root
+    group: root
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: repo
+
+- name: Dearmor Influxdata key into apt keyring (Debian/Ubuntu)
+  ansible.builtin.command:
+    cmd: gpg --batch --yes --dearmor
+      -o /etc/apt/keyrings/influxdata-archive.gpg
+      /etc/apt/keyrings/influxdata-archive.key
+    creates: /etc/apt/keyrings/influxdata-archive.gpg
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: repo
+
+- name: Influxdata apt repo (Debian/Ubuntu . 22/24)
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/etc/apt/keyrings/influxdata-archive.gpg]
+      https://repos.influxdata.com/debian stable main
+    filename: influxdata
+    state: present
+    update_cache: true
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: repo
+

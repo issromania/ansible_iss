@@ -1,65 +1,8 @@
-# Ex 1: Ungrouped hosts, specify before any group headers.
 
-## LISA HOSTS
-kuberadm.spacescience.ro
-
-# AUGER hosts
-paoshift.spacescience.ro
-auger01.spacescience.ro
-
-paowall
-paostation1
-paostation2
-
-# AUGER GRID hosts
-grid05.spacescience.ro
-seau2.spacescience.ro
-
-sbdii.spacescience.ro
-isscloud.spacescience.ro
-www2.spacescience.ro
-indico.spacescience.ro
-gw1.spacescience.ro
-ns.spacescience.ro
-herahsh.spacescience.ro
-astronomy.spacescience.ro
-iaa.spacescience.ro
-
-r3bsuit.spacescience.ro
-luxe.spacescience.ro
-
-sev.spacescience.ro
-monitor.spacescience.ro
-issaf.spacescience.ro
-sec.spacescience.ro
 
 durocern1 ansible_host=46.243.114.2 ansible_port=2201
-vmhost1   ansible_host=10.10.11.241
-vmhost2   ansible_host=10.10.11.243
 alice2    ansible_host=10.10.11.26
 alice4    ansible_host=10.10.11.28
-
-backup01  ansible_host=10.10.8.233
-
-alien.spacescience.ro
-
-mgm1.spacescience.ro
-mgm2.spacescience.ro
-mgm3.spacescience.ro
-
-nfs01  ansible_host=10.99.99.200
-## ansible_ssh_extra_args=' -J root@issaf.spacescience.ro ' ansible_ssh_private_key_file=/root/.ssh/id_ed25519
-
-## LISA
-ceph1.lisa  ansible_host=10.10.180.31
-ceph2.lisa  ansible_host=10.10.180.32
-ceph3.lisa  ansible_host=10.10.180.33
-wn1.lisa    ansible_host=10.10.180.41
-wn2.lisa    ansible_host=10.10.180.42
-wn3.lisa    ansible_host=10.10.180.43
-wn4.lisa    ansible_host=10.10.180.44
-wn5.lisa    ansible_host=10.10.180.45
-
 
 [all:vars]
 # ansible_ssh_private_key_file=/root/.ssh/id_ed25519
@@ -68,37 +11,47 @@ wn5.lisa    ansible_host=10.10.180.45
 ## Define functional groups
 ############################################################
 
-[nfs_servers]
-nfs01  ansible_host=10.99.99.200
-## ansible_ssh_private_key_file=/root/.ssh/id_ed25519
+[misc]
+sev.spacescience.ro
+monitor.spacescience.ro
+iaa.spacescience.ro
+backup01  ansible_host=10.10.8.233
+
+
+#[auger:vars]
+[auger]
+auger01.spacescience.ro
+paowall
+paostation1
+paostation2
+
+[auger_grid]
+grid05.spacescience.ro
+seau2.spacescience.ro
+
+[lisa_adm]
+kuberadm.spacescience.ro
 
 [lisa_wn]
-wn1.lisa
-wn2.lisa
-wn3.lisa
-wn4.lisa
+wn1.lisa    ansible_host=10.10.180.41
+wn2.lisa    ansible_host=10.10.180.42
+wn3.lisa    ansible_host=10.10.180.43
+wn4.lisa    ansible_host=10.10.180.44
+wn5.lisa    ansible_host=10.10.180.45
 
 [lisa_ceph]
-ceph1.lisa
-ceph2.lisa
-ceph3.lisa
+ceph1.lisa  ansible_host=10.10.180.31
+ceph2.lisa  ansible_host=10.10.180.32
+ceph3.lisa  ansible_host=10.10.180.33
 
 [lisa_cluster:children]
 lisa_wn
 lisa_ceph
 
-[vmhosts]
-vmhost1
-vmhost2
+[r3b]
+r3bsuit.spacescience.ro
+luxe.spacescience.ro
 
-# [paoremote:vars]
-
-[paoremote]
-paowall
-paostation1
-paostation2
-
-#########################################################################
 #########################################################################
 [eos_fst]
 
@@ -167,6 +120,25 @@ wazuh_agent_group=issaf
 #########################################################################
 # MISC grouping by attributes
 
+[VMS]
+paoshift.spacescience.ro
+sbdii.spacescience.ro
+isscloud.spacescience.ro
+www2.spacescience.ro
+indico.spacescience.ro
+gw1.spacescience.ro
+ns.spacescience.ro
+herahsh.spacescience.ro
+astronomy.spacescience.ro
+sec.spacescience.ro
+emsys.spacescience.ro
+
+
+[VMHOSTS]
+vmhost1   ansible_host=10.10.11.241
+vmhost2   ansible_host=10.10.11.243
+
+
 [lsi]
 fst01.spacescience.ro
 fst02.spacescience.ro
@@ -190,26 +162,10 @@ fst20.spacescience.ro
 seau2.spacescience.ro
 issaf.spacescience.ro
 
+[nfs]
+nfs01  ansible_host=10.99.99.200    ## ansible_ssh_extra_args=' -J root@issaf.spacescience.ro ' ansible_ssh_private_key_file=/root/.ssh/id_ed25519
 
-#########################################################################
-#########################################################################
-#[switch_dell:vars]
-#ansible_user=admin
-#ansible_port=22
-#ansible_network_os=dellos10
-
-#[switch_dell]
-#dell01 ansible_host=172.20.0.125
-#dell02 ansible_host=172.20.0.124
-
-#[switch_hp:vars]
-#ansible_connection=netconf
-#ansible_network_os=network-os
-#ansible_user=levantica
-#ansible_port=22
-#ansible_ssh_private_key_file=~/.ssh/id_rsa_root_monitor
-#ansible_ssh_common_args='-o Compression=yes -o Ciphers +3des-cbc'
-
-#[switch_hp]
-#core0 ansible_host=172.20.0.99
-
+[nfs_metrics]
+issaf.spacescience.ro
+alien.spacescience.ro
+nfs01  ansible_host=10.99.99.200    ## ansible_ssh_extra_args=' -J root@issaf.spacescience.ro ' ansible_ssh_private_key_file=/root/.ssh/id_ed25519

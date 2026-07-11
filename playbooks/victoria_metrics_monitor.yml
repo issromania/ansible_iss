@@ -1,0 +1,109 @@
+---
+- name: VictoriaMetrics single-node server on monitor
+  hosts: monitor.spacescience.ro
+  gather_facts: true
+  vars:
+    vm_version: "v1.147.0"
+    vm_data_path: "/home/mon_metrics"
+    vm_user: "victoriametrics"
+    vm_archive: "victoria-metrics-linux-amd64-{{ vm_version }}.tar.gz"
+    vm_url: "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/{{ vm_version }}/{{ vm_archive }}"
+    vm_sha256: "7d16e5099be040e10019cfe0c03c50043bad4e896b371129cb41be80efd687cc"          # . from Phase 0.5
+  tasks:
+
+    # --- prereqs for the sefcontext/semanage path ---
+    - name: Ensure SELinux management tooling present
+      ansible.builtin.package:
+        name: policycoreutils-python-utils
+        state: present
+
+    # --- service account ---
+    - name: Create vm group
+      ansible.builtin.group:
+        name: "{{ vm_user }}"
+        system: true
+
+    - name: Create vm system user
+      ansible.builtin.user:
+        name: "{{ vm_user }}"
+        group: "{{ vm_user }}"
+        system: true
+        shell: /sbin/nologin
+        create_home: false
+
+    # --- binary ---
+    - name: Download VictoriaMetrics archive (checksum-verified)
+      ansible.builtin.get_url:
+        url: "{{ vm_url }}"
+        dest: "/tmp/{{ vm_archive }}"
+        checksum: "sha256:{{ vm_sha256 }}"
+        mode: "0644"
+
+    - name: Unpack binary into /usr/local/bin
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ vm_archive }}"
+        dest: /usr/local/bin/
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0755"
+
+    # --- data dir (created and labeled BEFORE first start) ---
+    - name: Create data directory on the RAID1 volume
+      ansible.builtin.file:
+        path: "{{ vm_data_path }}"
+        state: directory
+        owner: "{{ vm_user }}"
+        group: "{{ vm_user }}"
+        mode: "0750"
+
+    - name: Override SELinux fcontext for data dir (var_lib_t, not user_home_dir_t)
+      community.general.sefcontext:
+        target: "{{ vm_data_path }}(/.*)?"
+        setype: var_lib_t
+        state: present
+      register: vm_fcontext
+
+    - name: Apply SELinux context to data dir
+      ansible.builtin.command: "restorecon -RvF {{ vm_data_path }}"
+      register: vm_restorecon
+      changed_when: "'Relabeled' in vm_restorecon.stdout"
+
+    # --- configuration ---
+    - name: Deploy EnvironmentFile
+      ansible.builtin.copy:
+        dest: /etc/sysconfig/victoria-metrics
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          VM_OPTS="-storageDataPath={{ vm_data_path }} -retentionPeriod=10y -inmemoryDataFlushInterval=15s -httpListenAddr=:8428 -selfScrapeInterval=30s -loggerOutput=stderr -loggerLevel=INFO"
+      register: vm_envfile
+
+    - name: Deploy systemd unit
+      ansible.builtin.copy:
+        src:  "{{ playbook_dir }}/../additions/victoria_metrics/victoria-metrics.service"
+        dest: /etc/systemd/system/victoria-metrics.service
+        owner: root
+        group: root
+        mode: "0644"
+      register: vm_unit
+
+    # --- service ---
+    - name: Enable and (re)start VictoriaMetrics
+      ansible.builtin.systemd:
+        name: victoria-metrics
+        enabled: true
+        state: "{{ 'restarted' if (vm_envfile is changed or vm_unit is changed) else 'started' }}"
+        daemon_reload: true
+
+    - name: Gate on HTTP health
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8428/health"
+        status_code: 200
+      register: vm_health
+      retries: 5
+      delay: 3
+      until: vm_health.status == 200
+
+
