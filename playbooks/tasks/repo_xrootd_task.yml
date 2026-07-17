@@ -1,0 +1,67 @@
+---
+# Configure the official XRootD package repository.
+# Upstream reference: https://xrootd.org/dload.html
+# Include with: - ansible.builtin.include_tasks: repo_xrootd_task.yml
+
+- name: Assert supported OS family
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] in ['RedHat', 'Debian']
+    fail_msg: "XRootD official repos: unsupported os_family '{{ ansible_facts['os_family'] }}'"
+
+# ----------------------------------------------------------------------
+# RPM based: EL family + Fedora
+# ----------------------------------------------------------------------
+
+- name: Import XRootD RPM signing key
+  ansible.builtin.rpm_key:
+    key: https://xrootd.web.cern.ch/repo/RPM-GPG-KEY.txt
+    fingerprint: B3D5 6D10 62CA 39A5 92CD 70EA E07D BF0E FD32 3FF0
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Install XRootD repo file
+  ansible.builtin.get_url:
+    url: >-
+      {{ 'https://xrootd.web.cern.ch/xrootd-fedora.repo'
+         if ansible_facts['distribution'] == 'Fedora'
+         else 'https://xrootd.web.cern.ch/xrootd.repo' }}
+    dest: /etc/yum.repos.d/xrootd.repo
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_facts['os_family'] == 'RedHat'
+
+# ----------------------------------------------------------------------
+# DEB based: Debian + Ubuntu
+# ----------------------------------------------------------------------
+
+- name: Assert Debian/Ubuntu release is published upstream
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution_release'] in
+        ['bullseye', 'bookworm', 'trixie', 'jammy', 'noble', 'resolute']
+    fail_msg: >-
+      No XRootD repository published for
+      {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_release'] }}
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Install XRootD APT signing key
+  ansible.builtin.get_url:
+    url: https://xrootd.web.cern.ch/repo/RPM-GPG-KEY.txt
+    dest: /usr/share/keyrings/xrootd.asc
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Add XRootD APT repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/usr/share/keyrings/xrootd.asc]
+      https://xrootd.web.cern.ch/{{ 'ubuntu' if ansible_facts['distribution'] == 'Ubuntu' else 'debian' }}
+      {{ ansible_facts['distribution_release'] }} stable
+    filename: xrootd
+    state: present
+    update_cache: true
+  when: ansible_facts['os_family'] == 'Debian'
