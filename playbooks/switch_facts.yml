@@ -1,5 +1,0 @@
----
-- hosts : core0
-  tasks:
-  - include_tasks: tasks/comware_facts.yml
-

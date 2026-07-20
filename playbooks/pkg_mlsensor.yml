@@ -1,6 +1,0 @@
----
-- hosts: "{{ target }}"
-  gather_facts: False
-  tasks:
-  - include_tasks: tasks/pkg_mlsensor_task.yml
-

@@ -1,5 +1,0 @@
----
-- hosts: "{{ target }}"
-  gather_facts: False
-  tasks:
-  - include_tasks: tasks/repo_wlcg_task.yml

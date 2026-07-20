@@ -1,5 +1,0 @@
----
-- hosts: "{{ target }}"
-  gather_facts: False
-  tasks:
-  - include_tasks: tasks/pkg_yum-utils_task.yml
