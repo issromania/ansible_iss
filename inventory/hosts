@@ -1,34 +1,161 @@
-
-
-durocern1 ansible_host=46.243.114.2 ansible_port=2201
-alice2    ansible_host=10.10.11.26
-alice4    ansible_host=10.10.11.28
-
 [all:vars]
 # ansible_ssh_private_key_file=/root/.ssh/id_ed25519
+wazuh_manager_ip: "sec.spacescience.ro"
+wazuh_agent_group: "default"
+wazuh_agent_version: "4.14.1"
 
 ############################################################
 ## Define functional groups
 ############################################################
 
+# nu stiu unde sa trec astea ..
+#durocern1 ansible_host=46.243.114.2 ansible_port=2201
+#alice2    ansible_host=10.10.11.26
+#alice4    ansible_host=10.10.11.28
+
+#########################################################################
+# tot nu stiu unde sa le trec, le pun in misc
 [misc]
 sev.spacescience.ro
 monitor.spacescience.ro
 iaa.spacescience.ro
 backup01  ansible_host=10.10.8.233
 
+[misc:vars]
+wazuh_agent_group=misc
+telegraf_cluster=misc
+inventory_cluster=misc
 
-#[auger:vars]
+
+#########################################################################
+[eos_fst]
+
+[eos_mgm]
+mgm1.spacescience.ro
+mgm2.spacescience.ro
+mgm3.spacescience.ro
+
+[eos_cluster:children]
+eos_mgm
+eos_fst
+
+[eos_cluster:vars]
+wazuh_agent_group=eos
+telegraf_cluster=eos
+inventory_cluster=eos
+
+#########################################################################
+[wn_alien:vars]
+
+[wn_alien]
+
+[alien]
+alien.spacescience.ro
+
+[alien_cluster:children]
+alien
+wn_alien
+
+[alien_cluster:vars]
+wazuh_agent_group=alien
+telegraf_cluster=alien
+inventory_cluster=alien
+
+#########################################################################
+[wn_issaf:vars]
+ansible_ssh_private_key_file = /root/.ssh/id_ed25519
+
+[wn_issaf]
+
+[issaf]
+issaf.spacescience.ro
+nfs01  ansible_host=10.99.99.200
+
+[issaf_cluster:children]
+issaf
+wn_issaf
+
+[issaf_cluster:vars]
+wazuh_agent_group=issaf
+telegraf_cluster=issaf
+inventory_cluster=issaf
+
+
+#########################################################################
+[VMS]
+astronomy.spacescience.ro
+emsys.spacescience.ro
+eumetsat.spacescience.ro
+gw1.spacescience.ro
+herahsh.spacescience.ro
+indico.spacescience.ro
+isscloud.spacescience.ro
+kuberadm.spacescience.ro
+ns.spacescience.ro
+paoshift.spacescience.ro
+sbdii.spacescience.ro
+sec.spacescience.ro
+www2.spacescience.ro
+unifi   ansible_host=10.10.8.246
+
+[VMS:vars]
+wazuh_agent_group=VMS
+telegraf_cluster=VMS
+inventory_cluster=VMS
+
+#########################################################################
+[VMHOSTS]
+vmhost1   ansible_host=10.10.11.241
+vmhost2   ansible_host=10.10.11.243
+
+[misc:vars]
+wazuh_agent_group=VMHOSTS
+telegraf_cluster=VMHOSTS
+inventory_cluster=VMHOSTS
+
+#########################################################################
+[r3b]
+r3bsuit.spacescience.ro
+luxe.spacescience.ro
+
+[r3b:vars]
+wazuh_agent_group=r3b
+telegraf_cluster=r3b
+inventory_cluster=r3b
+
+#########################################################################
 [auger]
 auger01.spacescience.ro
-paowall
-paostation1
-paostation2
+##paowall  ansible_host=10.10.8.195
+##paostation1 ansible_host=10.10.8.196
+##paostation2 ansible_host=10.10.8.197
 
-[auger_grid]
+[auger:vars]
+wazuh_agent_group=auger
+telegraf_cluster=auger
+inventory_cluster=auger
+
+[augergrid]
 grid05.spacescience.ro
 seau2.spacescience.ro
 
+[augergrid:vars]
+wazuh_agent_group=auger
+telegraf_cluster=auger
+inventory_cluster=auger
+
+[augergrid_wn]
+
+[augergrid_cluster:children]
+augergrid
+augergrid_wn
+
+[augergrid_cluster:vars]
+wazuh_agent_group=auger
+telegraf_cluster=auger
+inventory_cluster=auger
+
+#########################################################################
 [lisa_adm]
 kuberadm.spacescience.ro
 
@@ -48,124 +175,38 @@ ceph3.lisa  ansible_host=10.10.180.33
 lisa_wn
 lisa_ceph
 
-[r3b]
-r3bsuit.spacescience.ro
-luxe.spacescience.ro
+[lisa_cluster:vars]
+wazuh_agent_group=lisa
+telegraf_cluster=lisa
+inventory_cluster=lisa
 
 #########################################################################
-[eos_fst]
-
-[eos_mgm]
-mgm1.spacescience.ro
-mgm2.spacescience.ro
-mgm3.spacescience.ro
-
-[eos_cluster:children]
-eos_mgm
-eos_fst
-
-[eos_cluster:vars]
-wazuh_agent_group=eos
-
-#########################################################################
-#########################################################################
-[wn_umd:vars]
-ansible_connection=ssh
-ansible_user=root
-ansible_port=22
-ansible_ssh_common_args=' -o PreferredAuthentications=publickey -o StrictHostKeyChecking=no -o Compression=yes -o ProxyJump=root@grid05.spacescience.ro:60000 '
-rocks_node="1"
-
-[wn_umd]
-
-
-#########################################################################
-#########################################################################
-
-[wn_alien:vars]
-
-[wn_alien]
-
-[alien]
-alien.spacescience.ro
-
-[alien_cluster:children]
-alien
-wn_alien
-
-[alien_cluster:vars]
-wazuh_agent_group=alien
-
-
-#########################################################################
-#########################################################################
-[wn_issaf:vars]
-##ansible_ssh_extra_args = ' -J root@issaf.spacescience.ro '
-ansible_ssh_private_key_file = /root/.ssh/id_ed25519
-
-[wn_issaf]
-
-[issaf]
-issaf.spacescience.ro
-
-[issaf_cluster:children]
-issaf
-wn_issaf
-
-[issaf_cluster:vars]
-wazuh_agent_group=issaf
-
-
-#########################################################################
-#########################################################################
-# MISC grouping by attributes
-
-[VMS]
-paoshift.spacescience.ro
-sbdii.spacescience.ro
-isscloud.spacescience.ro
-www2.spacescience.ro
-indico.spacescience.ro
-gw1.spacescience.ro
-ns.spacescience.ro
-herahsh.spacescience.ro
-astronomy.spacescience.ro
-sec.spacescience.ro
-emsys.spacescience.ro
-
-
-[VMHOSTS]
-vmhost1   ansible_host=10.10.11.241
-vmhost2   ansible_host=10.10.11.243
-
-
-[lsi]
-fst01.spacescience.ro
-fst02.spacescience.ro
-fst03.spacescience.ro
-fst04.spacescience.ro
-fst05.spacescience.ro
-fst06.spacescience.ro
-fst07.spacescience.ro
-fst08.spacescience.ro
-fst09.spacescience.ro
-fst10.spacescience.ro
-fst11.spacescience.ro
-fst12.spacescience.ro
-fst13.spacescience.ro
-fst14.spacescience.ro
-fst16.spacescience.ro
-fst17.spacescience.ro
-fst18.spacescience.ro
-fst19.spacescience.ro
-fst20.spacescience.ro
-seau2.spacescience.ro
-issaf.spacescience.ro
-
-[nfs]
-nfs01  ansible_host=10.99.99.200    ## ansible_ssh_extra_args=' -J root@issaf.spacescience.ro ' ansible_ssh_private_key_file=/root/.ssh/id_ed25519
-
 [nfs_metrics]
 issaf.spacescience.ro
 alien.spacescience.ro
 nfs01  ansible_host=10.99.99.200    ## ansible_ssh_extra_args=' -J root@issaf.spacescience.ro ' ansible_ssh_private_key_file=/root/.ssh/id_ed25519
+
+[nfs_metrics:vars]
+telegraf_nfs: true
+
+#########################################################################
+[windows]
+
+[windows:vars]
+ansible_connection: ssh
+ansible_shell_type: powershell
+ansible_user: SSHAdmin
+ansible_ssh_private_key_file: ~/.ssh/id_ed25519   # adjust to your key
+
+#########################################################################
+[telegraf_nodes:children]
+eos_cluster
+alien_cluster
+issaf_cluster
+auger
+augergrid_cluster
+r3b
+VMS
+VMHOSTS
+misc
+

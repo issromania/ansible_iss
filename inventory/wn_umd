@@ -1,5 +1,0 @@
-[wn_umd]
-wna-0-0   ansible_host=172.16.1.254
-wna-0-1   ansible_host=172.16.1.253
-wna-0-2   ansible_host=172.16.1.252
-wna-0-3   ansible_host=172.16.1.251
