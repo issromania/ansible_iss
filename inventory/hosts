@@ -99,19 +99,19 @@ www2.spacescience.ro
 unifi   ansible_host=10.10.8.246
 
 [VMS:vars]
-wazuh_agent_group=VMS
-telegraf_cluster=VMS
-inventory_cluster=VMS
+wazuh_agent_group=vms
+telegraf_cluster=vms
+inventory_cluster=vms
 
 #########################################################################
 [VMHOSTS]
 vmhost1   ansible_host=10.10.11.241
 vmhost2   ansible_host=10.10.11.243
 
-[misc:vars]
-wazuh_agent_group=VMHOSTS
-telegraf_cluster=VMHOSTS
-inventory_cluster=VMHOSTS
+[VMHOSTS:vars]
+wazuh_agent_group=vmhosts
+telegraf_cluster=vmhosts
+inventory_cluster=vmhosts
 
 #########################################################################
 [r3b]
