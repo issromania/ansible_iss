@@ -1,8 +1,8 @@
 [all:vars]
 # ansible_ssh_private_key_file=/root/.ssh/id_ed25519
-wazuh_manager_ip: "sec.spacescience.ro"
-wazuh_agent_group: "default"
-wazuh_agent_version: "4.14.1"
+wazuh_manager_ip = "sec.spacescience.ro"
+wazuh_agent_group =  "default"
+wazuh_agent_version = "4.14.1"
 
 ############################################################
 ## Define functional groups
@@ -22,9 +22,9 @@ iaa.spacescience.ro
 backup01  ansible_host=10.10.8.233
 
 [misc:vars]
-wazuh_agent_group=misc
-telegraf_cluster=misc
-inventory_cluster=misc
+wazuh_agent_group = misc
+telegraf_cluster  = misc
+inventory_cluster = misc
 
 
 #########################################################################
@@ -40,9 +40,9 @@ eos_mgm
 eos_fst
 
 [eos_cluster:vars]
-wazuh_agent_group=eos
-telegraf_cluster=eos
-inventory_cluster=eos
+wazuh_agent_group = eos
+telegraf_cluster  = eos
+inventory_cluster = eos
 
 #########################################################################
 [wn_alien:vars]
@@ -57,9 +57,9 @@ alien
 wn_alien
 
 [alien_cluster:vars]
-wazuh_agent_group=alien
-telegraf_cluster=alien
-inventory_cluster=alien
+wazuh_agent_group = alien
+telegraf_cluster  = alien
+inventory_cluster = alien
 
 #########################################################################
 [wn_issaf:vars]
@@ -76,9 +76,9 @@ issaf
 wn_issaf
 
 [issaf_cluster:vars]
-wazuh_agent_group=issaf
-telegraf_cluster=issaf
-inventory_cluster=issaf
+wazuh_agent_group = issaf
+telegraf_cluster  = issaf
+inventory_cluster = issaf
 
 
 #########################################################################
@@ -99,9 +99,9 @@ www2.spacescience.ro
 unifi   ansible_host=10.10.8.246
 
 [VMS:vars]
-wazuh_agent_group=vms
-telegraf_cluster=vms
-inventory_cluster=vms
+wazuh_agent_group = vms
+telegraf_cluster  = vms
+inventory_cluster = vms
 
 #########################################################################
 [VMHOSTS]
@@ -109,9 +109,9 @@ vmhost1   ansible_host=10.10.11.241
 vmhost2   ansible_host=10.10.11.243
 
 [VMHOSTS:vars]
-wazuh_agent_group=vmhosts
-telegraf_cluster=vmhosts
-inventory_cluster=vmhosts
+wazuh_agent_group = vmhosts
+telegraf_cluster  = vmhosts
+inventory_cluster = vmhosts
 
 #########################################################################
 [r3b]
@@ -119,9 +119,9 @@ r3bsuit.spacescience.ro
 luxe.spacescience.ro
 
 [r3b:vars]
-wazuh_agent_group=r3b
-telegraf_cluster=r3b
-inventory_cluster=r3b
+wazuh_agent_group = r3b
+telegraf_cluster  = r3b
+inventory_cluster = r3b
 
 #########################################################################
 [auger]
@@ -131,18 +131,18 @@ auger01.spacescience.ro
 ##paostation2 ansible_host=10.10.8.197
 
 [auger:vars]
-wazuh_agent_group=auger
-telegraf_cluster=auger
-inventory_cluster=auger
+wazuh_agent_group = auger
+telegraf_cluster  = auger
+inventory_cluster = auger
 
 [augergrid]
 grid05.spacescience.ro
 seau2.spacescience.ro
 
 [augergrid:vars]
-wazuh_agent_group=auger
-telegraf_cluster=auger
-inventory_cluster=auger
+wazuh_agent_group = auger
+telegraf_cluster  = auger
+inventory_cluster = auger
 
 [augergrid_wn]
 
@@ -151,9 +151,9 @@ augergrid
 augergrid_wn
 
 [augergrid_cluster:vars]
-wazuh_agent_group=auger
-telegraf_cluster=auger
-inventory_cluster=auger
+wazuh_agent_group = auger
+telegraf_cluster  = auger
+inventory_cluster = auger
 
 #########################################################################
 [lisa_adm]
@@ -176,9 +176,9 @@ lisa_wn
 lisa_ceph
 
 [lisa_cluster:vars]
-wazuh_agent_group=lisa
-telegraf_cluster=lisa
-inventory_cluster=lisa
+wazuh_agent_group = lisa
+telegraf_cluster  = lisa
+inventory_cluster = lisa
 
 #########################################################################
 [nfs_metrics]
@@ -187,16 +187,16 @@ alien.spacescience.ro
 nfs01  ansible_host=10.99.99.200    ## ansible_ssh_extra_args=' -J root@issaf.spacescience.ro ' ansible_ssh_private_key_file=/root/.ssh/id_ed25519
 
 [nfs_metrics:vars]
-telegraf_nfs: true
+telegraf_nfs = true
 
 #########################################################################
 [windows]
 
 [windows:vars]
-ansible_connection: ssh
-ansible_shell_type: powershell
-ansible_user: SSHAdmin
-ansible_ssh_private_key_file: ~/.ssh/id_ed25519   # adjust to your key
+ansible_connection = ssh
+ansible_shell_type = powershell
+ansible_user = SSHAdmin
+ansible_ssh_private_key_file = ~/.ssh/id_ed25519   # adjust to your key
 
 #########################################################################
 [telegraf_nodes:children]
