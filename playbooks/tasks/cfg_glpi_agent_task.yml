@@ -16,9 +16,9 @@
 
 - name: GLPI agent | common facts
   ansible.builtin.set_fact:
-    glpi_agent_version: "1.17"
+    glpi_agent_version: "1.19"
     glpi_server_url: "https://inventory.spacescience.ro/front/inventory.php"
-    glpi_agent_tag: "iss"                                   # static institutional tag; change if you route by entity
+    glpi_agent_tag: "{{ inventory_cluster | default('misc', true) }}"
     glpi_scanner_host: "monitor.spacescience.ro"
     glpi_is_scanner: "{{ inventory_hostname == 'monitor.spacescience.ro' }}"
 
@@ -68,11 +68,58 @@
   register: glpi_cfg
   when: ansible_facts['system'] == 'Linux'
 
+# ---- ssh-keyscan shim (Linux) ----
+# glpi-agent's Generic::SSH inventory module runs `ssh-keyscan -T 1 <ip>` with no -t,
+# probing 5 host key types in parallel. That exceeds sshd's MaxStartups begin value
+# (4 on fst*), triggering daemon-wide throttling and dropped connections once per
+# inventory cycle. Restricting to the 3 types that exist keeps it under the threshold
+# and removes the two sk-* negotiation failures that can never succeed.
+
+- name: GLPI agent | shim directories (Linux)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - /opt/glpi-wrap
+    - /etc/systemd/system/glpi-agent.service.d
+  when: ansible_facts['system'] == 'Linux'
+
+- name: GLPI agent | ssh-keyscan shim (Linux)
+  ansible.builtin.copy:
+    dest: /opt/glpi-wrap/ssh-keyscan
+    owner: root
+    group: root
+    mode: '0755'
+    setype: bin_t                    # no-op where SELinux is disabled; see note 3
+    content: |
+      #!/bin/sh
+      # Managed by Ansible - glpi_agent task. Do not edit.
+      exec /usr/bin/ssh-keyscan -t rsa,ecdsa,ed25519 "$@"
+  register: glpi_shim
+  when: ansible_facts['system'] == 'Linux'
+
+- name: GLPI agent | PATH drop-in pointing at shim (Linux)
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/glpi-agent.service.d/10-path.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      # Managed by Ansible - glpi_agent task. Do not edit.
+      [Service]
+      Environment=PATH=/opt/glpi-wrap:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+  register: glpi_pathdrop
+  when: ansible_facts['system'] == 'Linux'
+
 - name: GLPI agent | enable/(re)start service (Linux)
   ansible.builtin.systemd:
     name: glpi-agent
     enabled: true
-    state: "{{ 'restarted' if glpi_cfg is changed else 'started' }}"
+    daemon_reload: "{{ glpi_pathdrop is changed }}"
+    state: "{{ 'restarted' if (glpi_cfg is changed or glpi_shim is changed or glpi_pathdrop is changed) else 'started' }}"
   when: ansible_facts['system'] == 'Linux'
 
 # ---- Windows (over OpenSSH; ansible.windows) ----

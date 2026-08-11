@@ -1,0 +1,10 @@
+---
+- name: Configure Telegraf agents and push to VictoriaMetrics
+  hosts: "{{ target | default('telegraf_nodes') }}"           # the built rollup; lisa_* excluded by omission
+  gather_facts: true              # required: virtualization_role + ipmi facts
+  tasks:
+    - name: Configure telegraf agent
+      ansible.builtin.import_tasks: tasks/cfg_telegraf_task.yml
+
+
+

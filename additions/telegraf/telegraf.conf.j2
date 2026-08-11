@@ -12,6 +12,8 @@
 {% set telegraf_nfs   = telegraf_nfs | default(false) %}
 # host role: {{ 'VIRTUAL' if is_virtual else 'PHYSICAL' }}{% if telegraf_ipmi %} + IPMI{% endif %}{% if telegraf_nfs %} + NFS-server{% endif %}
 
+[global_tags]
+  cluster = "{{ telegraf_cluster | default('misc') }}"
 
 [agent]
   interval = "60s"
@@ -78,6 +80,10 @@
 {% endif %}
 {% if not is_virtual %}
 ########## physical-only ##########
+
+[[inputs.temp]]
+  # hwmon thermal baseline (CPU/NVMe/chipset). World-readable, no setup needed.
+
 {% if telegraf_ipmi %}
 [[inputs.ipmi_sensor]]
   # no `servers` => local in-band BMC (KCS). Runs as root; reads /dev/ipmi0 directly.
