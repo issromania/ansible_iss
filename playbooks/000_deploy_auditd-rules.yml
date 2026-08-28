@@ -1,0 +1,6 @@
+---
+- hosts: "{{ target | default('all') }}"
+  gather_facts: True
+  tasks:
+  - include_tasks: tasks/cfg_audit_task.yml
+

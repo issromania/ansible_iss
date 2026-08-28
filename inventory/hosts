@@ -85,7 +85,7 @@ inventory_cluster = issaf
 [VMS]
 astronomy.spacescience.ro
 emsys.spacescience.ro
-eumetsat.spacescience.ro
+eumetsat.spacescience.ro    ansible_python_interpreter=/usr/bin/python3.9
 gw1.spacescience.ro
 herahsh.spacescience.ro
 indico.spacescience.ro
@@ -158,6 +158,11 @@ inventory_cluster = auger
 #########################################################################
 [lisa_adm]
 kuberadm.spacescience.ro
+
+[lisa_adm:vars]
+wazuh_agent_group = lisa
+telegraf_cluster  = lisa
+inventory_cluster = lisa
 
 [lisa_wn]
 wn1.lisa    ansible_host=10.10.180.41

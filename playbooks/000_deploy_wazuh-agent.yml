@@ -1,0 +1,6 @@
+---
+- hosts: "{{ target | default('all:!sec.spacescience.ro') }}"
+  gather_facts: True
+  tasks:
+  - include_tasks: tasks/pkg_wazuh_agent_task.yml
+

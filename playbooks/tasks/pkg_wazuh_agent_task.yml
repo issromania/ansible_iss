@@ -28,6 +28,10 @@
 #   wazuh_agent_group     : Wazuh agent group       (default: default)
 #   wazuh_agent_version   : Version string for Windows MSI URL (default: 4.14.1)
 
+- name: wazuh | Refuse to install the agent on the manager
+  ansible.builtin.assert:
+    that: inventory_hostname != 'sec.spacescience.ro'
+    fail_msg: "sec is the Wazuh manager. Do not install the agent here."
 
 # ..............................................................................
 # SECTION 1 . EL9 / EL10 / Fedora
@@ -59,18 +63,24 @@
       priority=1
   when: ansible_facts[ 'os_family' ] == "RedHat"
 
+- name: wazuh | Require manager address
+  ansible.builtin.assert:
+    that: wazuh_manager_ip is defined and wazuh_manager_ip | length > 0
+    fail_msg: "wazuh_manager_ip is not set for {{ inventory_hostname }}"
+
 - name: "[RPM] Install wazuh-agent package"
   # enablerepo overrides enabled=0 for this transaction only.
   # WAZUH_MANAGER / WAZUH_AGENT_NAME are consumed by the RPM %post scriptlet
   # and written into /var/ossec/etc/ossec.conf on fresh install only.
+  # wazuh_agent_state     : 'present' (default) or 'latest' to upgrade
   ansible.builtin.dnf:
     name: wazuh-agent
-    state: present
+    state: "{{ wazuh_agent_state | default('present') }}"
     enablerepo: wazuh
   environment:
     WAZUH_MANAGER: "{{ wazuh_manager_ip }}"
     WAZUH_AGENT_NAME: "{{ wazuh_agent_name | default(inventory_hostname) }}"
-    WAZUH_AGENT_GROUP: "{{ wazuh_agent_group | default('default') }}"
+    WAZUH_AGENT_GROUP: "{{ wazuh_agent_group | default('misc') }}"
   register: _wazuh_rpm_pkg
   when: ansible_facts[ 'os_family' ] == "RedHat"
 
@@ -111,24 +121,60 @@
     state: started
   when: ansible_facts[ 'os_family' ] == "RedHat"
 
-
 # ..............................................................................
-# SECTION 2 . Ubuntu 22.04 / 24.04 / 26.04
+# SECTION 2 - Ubuntu 20.04 / 22.04 / 24.04 / 26.04
 # Condition: ansible_facts[ 'os_family' ] == "Debian"
-# Re-run behaviour note: the 'copy' task re-enables the deb line on every run
-# (it overwrites the commented-out version), and the lineinfile task comments
-# it out again. Both show as 'changed' on re-runs but are harmless . apt does
-# not reinstall an already-installed package. Accepted trade-off for simplicity.
+#
+# REPLACES the previous apt-module-based section. Rationale:
+#   ansible.builtin.apt requires python3-apt on the target. python3-apt ships
+#   a compiled extension bound to the distribution's DEFAULT interpreter --
+#   on Ubuntu 20.04 that is python3.8, which current ansible-core refuses
+#   (needs 3.9+). Pointing ansible_python_interpreter at /usr/bin/python3.9
+#   satisfies ansible-core but breaks the apt module, because there is no
+#   python3.9-apt package. Verified on eumetsat 2026-08-27.
+#
+#   Driving apt-get through ansible.builtin.command removes the python3-apt
+#   dependency entirely. Every other module used here is pure Python and works
+#   under 3.9. This also makes the path more tolerant on unifi: apt-get update
+#   returns 0 on per-repo GPG warnings, whereas the apt module treats them as
+#   a failure.
+#
+# Requires on Ubuntu 20.04 hosts, set inline in the inventory host line:
+#   eumetsat.spacescience.ro  ansible_python_interpreter=/usr/bin/python3.9
+#
+# Re-run behaviour note (unchanged, pre-existing): the 'copy' task re-enables
+# the deb line on every run and the lineinfile task comments it out again.
+# Both show as 'changed' but are harmless.
 # ..............................................................................
+
+- name: "[DEB] Check whether prerequisites are installed"
+  # dpkg-query returns non-zero for an unknown package; failed_when false
+  # keeps that as data rather than an error.
+  ansible.builtin.command:
+    cmd: dpkg-query -W -f=${Status} gnupg apt-transport-https
+  register: _deb_prereq
+  changed_when: false
+  failed_when: false
+  when: ansible_facts[ 'os_family' ] == "Debian"
 
 - name: "[DEB] Install prerequisites"
-  ansible.builtin.apt:
-    name:
-      - gnupg
-      - apt-transport-https
-    state: present
-    update_cache: true
-  when: ansible_facts[ 'os_family' ] == "Debian"
+  ansible.builtin.command:
+    cmd: apt-get update -qq
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  when:
+    - ansible_facts[ 'os_family' ] == "Debian"
+    - "'install ok installed' not in _deb_prereq.stdout | default('')"
+  changed_when: false
+
+- name: "[DEB] Install gnupg and apt-transport-https"
+  ansible.builtin.command:
+    cmd: apt-get install -y -q gnupg apt-transport-https
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  when:
+    - ansible_facts[ 'os_family' ] == "Debian"
+    - "'install ok installed' not in _deb_prereq.stdout | default('')"
 
 - name: "[DEB] Download Wazuh GPG key"
   ansible.builtin.get_url:
@@ -141,6 +187,8 @@
 - name: "[DEB] Dearmor GPG key into signed-by keyring"
   # gpg --dearmor converts the ASCII-armored key to the binary format required
   # by the signed-by apt directive. 'creates' makes this idempotent.
+  # chmod 644 is REQUIRED: a keyring not readable by the '_apt' user is
+  # silently ignored, producing a NO_PUBKEY error that looks like a missing key.
   ansible.builtin.shell:
     cmd: >
       gpg --dearmor < /tmp/wazuh-key.asc > /usr/share/keyrings/wazuh.gpg
@@ -155,24 +203,59 @@
     group: root
     mode: '0644'
     content: "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main\n"
+  register: _deb_repo
+  when: ansible_facts[ 'os_family' ] == "Debian"
+
+- name: "[DEB] Check whether wazuh-agent is already installed"
+  ansible.builtin.command:
+    cmd: dpkg-query -W -f=${Status} wazuh-agent
+  register: _deb_wazuh_installed
+  changed_when: false
+  failed_when: false
+  when: ansible_facts[ 'os_family' ] == "Debian"
+
+- name: "[DEB] Decide whether the package step must run"
+  # Two cases run apt-get: a fresh install, or an explicit upgrade request.
+  #   wazuh_agent_state=present (default) -> install only if missing
+  #   wazuh_agent_state=latest            -> always run, apt-get upgrades
+  # Set with: -e wazuh_agent_state=latest
+  ansible.builtin.set_fact:
+    _deb_needs_pkg: >-
+      {{ ('install ok installed' not in (_deb_wazuh_installed.stdout | default('')))
+         or (wazuh_agent_state | default('present') == 'latest') }}
   when: ansible_facts[ 'os_family' ] == "Debian"
 
 - name: "[DEB] Update apt cache after repo deployment"
-  ansible.builtin.apt:
-    update_cache: true
-  when: ansible_facts[ 'os_family' ] == "Debian"
+  # Only when the agent is not yet installed. apt-get update on every run for
+  # an already-installed agent is wasted time on 2 hosts.
+  ansible.builtin.command:
+    cmd: apt-get update -qq
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  when:
+    - ansible_facts[ 'os_family' ] == "Debian"
+    - _deb_needs_pkg | bool
+  changed_when: false
 
-- name: "[DEB] Install wazuh-agent package"
-  ansible.builtin.apt:
-    name: wazuh-agent
-    state: present
+- name: "[DEB] Install or upgrade wazuh-agent package"
+  # WAZUH_MANAGER / WAZUH_AGENT_NAME / WAZUH_AGENT_GROUP are consumed by the
+  # DEB postinst scriptlet and written into /var/ossec/etc/ossec.conf on FRESH
+  # INSTALL ONLY. On an existing install they are discarded -- group drift is
+  # corrected by tasks/cfg_wazuh_agent_group_task.yml, not here.
+  ansible.builtin.command:
+    cmd: apt-get install -y -q wazuh-agent
   environment:
     DEBIAN_FRONTEND: noninteractive
     WAZUH_MANAGER: "{{ wazuh_manager_ip }}"
     WAZUH_AGENT_NAME: "{{ wazuh_agent_name | default(inventory_hostname) }}"
-    WAZUH_AGENT_GROUP: "{{ wazuh_agent_group | default('default') }}"
+    WAZUH_AGENT_GROUP: "{{ wazuh_agent_group | default('misc') }}"
   register: _wazuh_deb_pkg
-  when: ansible_facts[ 'os_family' ] == "Debian"
+  when:
+    - ansible_facts[ 'os_family' ] == "Debian"
+    - _deb_needs_pkg | bool
+  # Without this, an upgrade run where nothing changed still reports 'changed'
+  # and triggers a needless agent restart.
+  changed_when: "'0 upgraded, 0 newly installed' not in _wazuh_deb_pkg.stdout"
 
 - name: "[DEB] Disable Wazuh repository post-install"
   # Prevents wazuh-agent from being pulled in by an unattended apt upgrade.
@@ -196,7 +279,7 @@
     daemon_reload: true
   when:
     - ansible_facts[ 'os_family' ] == "Debian"
-    - _wazuh_deb_pkg.changed
+    - _wazuh_deb_pkg is changed
 
 - name: "[DEB] Enable wazuh-agent service at boot"
   ansible.builtin.systemd:
@@ -210,14 +293,13 @@
     state: restarted
   when:
     - ansible_facts[ 'os_family' ] == "Debian"
-    - _wazuh_deb_pkg.changed or _wazuh_deb_conf.changed
+    - _wazuh_deb_pkg is changed or _wazuh_deb_conf is changed
 
 - name: "[DEB] Ensure wazuh-agent is running"
   ansible.builtin.systemd:
     name: wazuh-agent
     state: started
   when: ansible_facts[ 'os_family' ] == "Debian"
-
 
 # ..............................................................................
 # SECTION 3 . Windows x86_64
@@ -237,7 +319,7 @@
 
 - name: "[WIN] Download Wazuh agent MSI"
   ansible.windows.win_get_url:
-    url: "https://packages.wazuh.com/4.x/windows/wazuh-agent-{{ wazuh_agent_version | default('4.14.1') }}-1.msi"
+    url: "https://packages.wazuh.com/4.x/windows/wazuh-agent-{{ wazuh_agent_version | default('4.14.7') }}-1.msi"
     dest: 'C:\Windows\Temp\wazuh-agent.msi'
     force: false
   when:
@@ -251,7 +333,7 @@
       /qn
       WAZUH_MANAGER="{{ wazuh_manager_ip }}"
       WAZUH_AGENT_NAME="{{ wazuh_agent_name | default(inventory_hostname) }}"
-      WAZUH_AGENT_GROUP="{{ wazuh_agent_group | default('default') }}"
+      WAZUH_AGENT_GROUP="{{ wazuh_agent_group | default('misc') }}"
     state: present
   register: _wazuh_win_pkg
   when:
