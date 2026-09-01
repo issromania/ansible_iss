@@ -1,0 +1,125 @@
+---
+# tasks/cfg_wazuh_agent_group_task.yml
+#
+# Makes the Ansible inventory authoritative for Wazuh agent group membership.
+#
+# WHY THIS IS NEEDED:
+#   WAZUH_AGENT_GROUP in pkg_wazuh_agent_task.yml is consumed by the package
+#   %post / postinst scriptlet on FRESH INSTALL ONLY. On an already-installed
+#   host the variable is silently discarded, so re-running the deploy task
+#   cannot correct group membership. Membership lives on the MANAGER in
+#   global.db; the agent-side <enrollment><groups> element is only a request
+#   made at enrollment time.
+#
+#   Wazuh also resets an agent to the 'default' group on re-enrollment. Any
+#   host rebuild, key regeneration, or manual re-add drops the agent back to
+#   'default' with no alert and no dashboard signal. Running this task on a
+#   schedule closes that drift vector.
+#
+# CONVENTION (decided 2026-08-27):
+#   misc     = Ansible-managed host with no more specific group
+#   default  = monitored but OUTSIDE configuration management (workstations)
+#   This split is what makes "monitoring scope == declared inventory" a
+#   statement that can be defended in a NIS2 audit.
+#
+# CAUTION -- '-f' (--force) IS DESTRUCTIVE BY DESIGN:
+#   It sets the agent to exactly one group, dropping all others. Correct today
+#   because every agent holds exactly one membership. If an OS-axis group is
+#   ever layered on top of the cluster groups, '-f' will silently strip it on
+#   the next run. Revisit this task at that point.
+#
+# Standalone. No handlers, no become -- runs as root.
+# Requires: wazuh_agent_group defined in inventory; 'sec.spacescience.ro'
+#           resolvable as an Ansible host for delegation.
+
+- name: wazuh group | Skip the Wazuh manager entirely
+  # CRITICAL. The manager also has /var/ossec/etc/client.keys -- it holds the
+  # key for EVERY agent, one per line. Without this guard the awk below would
+  # read field 1 of the FIRST line, i.e. some unrelated agent's ID, and then
+  # force THAT agent into sec's own wazuh_agent_group. On the current fleet
+  # that would have reassigned agent 001 (AlinTrandafir, a workstation
+  # deliberately left in 'default') into 'misc'. The manager self-monitors as
+  # agent 000 and has no group membership to reconcile.
+  ansible.builtin.meta: end_host
+  when: inventory_hostname == 'sec.spacescience.ro'
+
+- name: wazuh group | Check whether a Wazuh agent is present
+  ansible.builtin.stat:
+    path: /var/ossec/etc/client.keys
+  register: _client_keys
+
+- name: wazuh group | Read this agent's ID from client.keys
+  # Field 1 of client.keys is the agent ID as the manager knows it. Reading it
+  # here avoids a name-to-ID lookup on the manager, which would break on any
+  # host whose registered name differs from inventory_hostname.
+  #
+  # check_mode: false -- ansible.builtin.command is skipped in --check by
+  # default. Without this the whole task file reports nothing in check mode,
+  # which defeats the point of running it that way.
+  ansible.builtin.command:
+    cmd: awk '{print $1; exit}' /var/ossec/etc/client.keys
+  register: _agent_id
+  changed_when: false
+  check_mode: false
+  when: _client_keys.stat.exists
+
+- name: wazuh group | Report hosts that are not enrolled
+  # Empty client.keys means the package is installed but enrollment never
+  # completed. The agent shows as never-connected on the manager.
+  ansible.builtin.debug:
+    msg: >-
+      {{ inventory_hostname }}: no Wazuh agent enrollment
+      ({{ 'client.keys missing' if not _client_keys.stat.exists
+          else 'client.keys empty' }}). Group cannot be set.
+  when: not _client_keys.stat.exists or _agent_id.stdout | default('') | length == 0
+
+- name: wazuh group | Read the agent's current group membership
+  # failed_when: false is REQUIRED. agent_groups -s exits non-zero with
+  # "Internal error: list index out of range" when the agent's group array in
+  # global.db is empty -- observed on ceph3 (agent 089) 2026-08-27. That is
+  # precisely the state this task exists to repair, so a hard failure here
+  # would abort on the one host that needs fixing.
+  ansible.builtin.command:
+    cmd: /var/ossec/bin/agent_groups -s -i {{ _agent_id.stdout }}
+  delegate_to: sec.spacescience.ro
+  register: _grp_current
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - _client_keys.stat.exists
+    - _agent_id.stdout | default('') | length > 0
+    - wazuh_agent_group is defined
+
+- name: wazuh group | Decide whether the membership needs correcting
+  # Two triggers:
+  #   rc != 0        -> groupless / corrupt global.db row
+  #   regex miss     -> wrong group, or extra groups alongside the right one
+  # agent_groups -s prints "... belongs to groups: <a>,<b>." so anchoring on
+  # the trailing period matches ONLY when the inventory group is the sole
+  # membership. Both wrong-group and extra-group drift are caught.
+  ansible.builtin.set_fact:
+    _grp_needs_fix: >-
+      {{ (_grp_current.rc | default(1)) != 0
+         or (_grp_current.stdout | default('')
+             is not search('belongs to groups: ' ~ wazuh_agent_group ~ '\.')) }}
+  when: _grp_current is not skipped
+
+- name: wazuh group | Set the inventory group on the manager
+  # -a  add agent to group    -f  force single group    -q  no confirmation
+  ansible.builtin.command:
+    cmd: >-
+      /var/ossec/bin/agent_groups -a -i {{ _agent_id.stdout }}
+      -g {{ wazuh_agent_group }} -f -q
+  delegate_to: sec.spacescience.ro
+  register: _grp_set
+  changed_when: true
+  when: _grp_needs_fix | default(false) | bool
+
+- name: wazuh group | Report the correction
+  ansible.builtin.debug:
+    msg: >-
+      {{ inventory_hostname }} (ID {{ _agent_id.stdout }}) -> '{{ wazuh_agent_group }}'
+      (was: {{ _grp_current.stdout | default('unreadable') | trim }})
+  when: _grp_set is changed
+

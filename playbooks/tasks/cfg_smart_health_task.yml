@@ -1,0 +1,49 @@
+# Deploy interim SMART health collection: script + cron.d entry.
+# Temporary; remove once Telegraf inputs.smart feeds VictoriaMetrics.
+# Script source of truth is ${HOME}/bin/smart_health on the control node.
+
+- name: Ensure smartmontools and cronie are installed
+  ansible.builtin.package:
+    name:
+      - smartmontools
+      - cronie
+    state: present
+
+- name: Ensure crond is enabled and running
+  ansible.builtin.systemd_service:
+    name: crond
+    enabled: true
+    state: started
+
+# src resolves on the control node; env lookup avoids ~ expansion ambiguity
+- name: Install SMART health collection script
+  ansible.builtin.copy:
+    src: "{{ lookup('ansible.builtin.env', 'HOME') }}/bin/smart_health"
+    dest: /root/bin/smart_health
+    owner: root
+    group: root
+    mode: '0755'
+  register: smart_script
+
+# cron.d filenames must not contain dots - cronie ignores those
+# sixth field is the user; trailing newline is mandatory or the file is skipped
+- name: Install SMART health cron.d entry
+  ansible.builtin.copy:
+    dest: /etc/cron.d/smart_health
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      # Interim SMART health collection. Managed by Ansible - do not edit.
+      # Remove once Telegraf inputs.smart is live.
+      SHELL=/bin/bash
+      PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+      MAILTO=""
+
+      3-59/10 * * * * root /root/bin/smart_health
+
+- name: Prime the collection immediately on first deploy
+  ansible.builtin.command:
+    cmd: /root/bin/smart_health
+  when: smart_script is changed
+  changed_when: true
