@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+echo "                                        |   DISK(MB/s)        | ETH(MiB/s)  | OPEN |        USAGE             |   FILES       |"
+
+(
+echo "host        id  schgrp      gtag        load  R       W       Tot in out   R W  % Bytes Max   Used  Max   bal-shd iops bw"
+eos fs ls -b --io | tail -n +4 | head -n -2 | sed -r 's/.spacescience.ro//g; s/ K/K/g; s/ M/M/g; s/ G/G/g ; s/ T/T/g; s/\s+/ /g'
+) | column -t
+

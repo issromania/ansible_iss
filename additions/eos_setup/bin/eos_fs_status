@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+help () { 
+echo "${0} FS_ID STATUS; where status is one of rw|wo|ro|drain|draindead|off|empty";
+
+exit;
+}
+
+[[ -z "${1}" ]] && help
+
+FSID="${1}"
+STATUS="${2}"
+
+eos fs config "${FSID}" configstatus="${STATUS}"
+

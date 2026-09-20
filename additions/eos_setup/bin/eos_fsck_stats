@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+(
+echo "hostport id n(mem) n(disk) n(mgm) e(orph) e(unreg) e(layout) e(miss) e(disksize) e(mgmsize) e(disk-cx) e(mgm-cx)"
+eos fs ls -b --fsck | tail -n +4 | sed -r 's/.spacescience.ro//g;'
+) | column -t
+

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+eos fs ls --drain_jobs
+

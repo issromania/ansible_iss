@@ -1,0 +1,1 @@
+systemctl --no-pager status -l eos@mgm.service eos@mq.service

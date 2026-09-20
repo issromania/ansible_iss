@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+FSID=${1}
+shift
+[[ -z ${FSID} ]] && { echo "FSID required"; exit 1; }
+
+eos fs boot "${FSID}" --syncmgm
+

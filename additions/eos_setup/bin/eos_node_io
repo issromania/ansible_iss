@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+(
+echo "hostport ioload r-MBs w-MBs ethMiB ethMiB_i ethoMiB_o ropen wopen sz_used sz_max files files_max bal-shd iops bw"
+eos node ls -b --io | tail -n +4 | head -n -1 | sed 's/ISS::ALICE//g; s/ days/days/g; s/ K/K/g; s/ M/M/g; s/ G/G/g ; s/ T/T/g; s/\s+/ /g;'
+) | column -t
+

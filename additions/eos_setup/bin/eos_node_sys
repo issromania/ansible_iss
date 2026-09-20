@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+(
+echo "hostport vsize rss threads sockets kworkers eos xrootd kernel_ver start uptime"
+eos node ls -b --sys | tail -n +4 | head -n -1 | sed 's/ISS::ALICE//g; s/ days/days/g; s/ K/K/g; s/ M/M/g; s/ G/G/g ; s/ T/T/g; s/\s+/ /g;'
+) | column -t
+

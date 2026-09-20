@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+FSID=${1}
+shift
+[[ -z ${FSID} ]] && { echo "FSID required"; exit 1; }
+
+# parse eos filesystems
+while IFS= read -r fs_info; do
+    eval $(awk '{ for (idx = 1; idx <= NF; idx++) { if ( match($idx, "host") > 0 || match($idx, /^id.*/) > 0 ) printf("%s  ",$idx); }; printf("\n"); }' <<< "${fs_info}" ) #'
+
+    if [[ "${id}" == "${FSID}"  ]]; then
+        padded_id=$(printf "%04d\n" "${id}")
+        ssh "${host%%.*}" "eos-leveldb-inspect --dbpath /var/eos/md/fmd.${padded_id}.LevelDB/ --fsck"
+        break
+    fi
+done <<< "$(eos -b fs ls -b -m)"
+

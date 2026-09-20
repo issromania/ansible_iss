@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+OUTPUT=$(eos -b io stat -x)
+#echo -e "${OUTPUT}"
+
+HEADER=$(echo -e "${OUTPUT}" | head -n 5)
+BALANCER=$(echo -e "${OUTPUT}" | grep groupbalancer)
+echo "${HEADER}"
+echo "${BALANCER}"
+

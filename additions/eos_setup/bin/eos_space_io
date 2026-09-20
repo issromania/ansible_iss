@@ -1,0 +1,1 @@
+eos space ls --io | sed '1d;3d;'

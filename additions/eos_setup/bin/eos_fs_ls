@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+( echo "host  port    id  path    schedgroup  geotag  boot    cfgstat    drain   usage   active  health"
+eos fs ls -b ${@} | tail -n +4 | head -n -1 ) | column -t
+

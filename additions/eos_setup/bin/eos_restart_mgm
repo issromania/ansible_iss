@@ -1,0 +1,4 @@
+systemctl restart eos@master.service eos@mgm.service eos@mq.service
+
+systemctl --no-pager status -l eos@master.service eos@mgm.service eos@mq.service
+

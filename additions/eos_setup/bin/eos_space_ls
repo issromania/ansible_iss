@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+echo "                    |  GROUP  |  Nr of  |       SUM               | CAPACITY |"
+(
+echo "type name size mod    fs  fs-rw used  tot  tot(rw)   nom sched  quota balancing thresh conv ntx act wfe ntx act intergrp"
+
+eos space ls | tail -n +4 | sed -r 's/.spacescience.ro//g; s/ B/B/g; s/ K/K/g; s/ M/M/g; s/ G/G/g ; s/ T/T/g ; s/ P/P/g ;'
+) | column -t
+
