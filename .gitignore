@@ -1,5 +1,6 @@
 *.log
 **/*.log
+attic/*
 vault/*
 roles/**
 facts/**

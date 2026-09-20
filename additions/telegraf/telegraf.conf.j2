@@ -1,8 +1,8 @@
 {#- ==========================================================================
-    telegraf.conf.j2  —  MANAGED BY ANSIBLE, do not edit on the host
+    telegraf.conf.j2  .  MANAGED BY ANSIBLE, do not edit on the host
     Fact-driven switches:
       is_virtual      : true on KVM/VMware guests
-      telegraf_smart  : true on physical hosts (SMART body deferred)
+      telegraf_smart  : true on physical hosts (SMART device temp + health)
       telegraf_ipmi   : true on physical hosts exposing a BMC (ansible_ipmi fact)
       telegraf_nfs    : inventory-set (group nfs_metrics) -> NFS server stats
    ========================================================================== -#}
@@ -33,7 +33,7 @@
 ########## always-on (VM and physical) ##########
 
 [[inputs.cpu]]
-  percpu = false            # aggregate only — percpu on 128-core EPYC would explode cardinality
+  percpu = false            # aggregate only . percpu on 128-core EPYC would explode cardinality
   totalcpu = true
   collect_cpu_time = false
   report_active = true
@@ -49,27 +49,42 @@
 [[inputs.processes]]
 
 [[inputs.disk]]
-  ignore_fs = ["tmpfs","devtmpfs","devfs","iso9660","overlay","aufs","squashfs","autofs","nsfs","cvmfs2"]
+  # nsfs = namespace refs (/proc/<pid>/ns/*), not storage.
+  # nfs/nfs4 ignored: statfs() on an NFS mount blocks on the server, so one hung
+  # server would stall the whole disk collection cycle on every client. Export
+  # capacity is reported authoritatively by the NFS servers themselves.
+  # The trailing entries are pseudo-filesystems reporting zero/meaningless size.
+  ignore_fs = ["tmpfs","devtmpfs","devfs","iso9660","overlay","aufs","squashfs","autofs","nsfs","cvmfs2","nfs","nfs4","fuse.sshfs","rpc_pipefs","binfmt_misc","tracefs","fusectl","configfs","debugfs","mqueue","hugetlbfs","efivarfs"]
 
 [[inputs.diskio]]
+  # Purpose here is physical degradation detection and host-load correlation,
+  # NOT storage performance tuning.
+  #
+  # /proc/diskstats reports whole devices AND partitions. `devices` is an
+  # include-only option with no exclude counterpart, so the unwanted shapes are
+  # dropped at the output filter instead. Reading /proc/diskstats costs the same
+  # either way . only the emitted series count changes.
+  #
+  # md*/dm-* are dropped: an array/mapper device has no physical existence, its
+  # counters are the arithmetic sum of its members', which are already collected.
+  fieldexclude = ["merged_reads", "merged_writes", "io_svctm", "iops_in_progress"]
+
+  # tagdrop MUST be last in this block (same TOML sub-table rule as ipmi_sensor).
+  [inputs.diskio.tagdrop]
+    name = ["sd*[0-9]", "nvme*p[0-9]*", "vd*[0-9]", "loop*", "sr[0-9]*", "md*", "dm-*"]
 
 [[inputs.net]]
   # interface bytes/packets + err_in/err_out + drop_in/drop_out.
-  # This is the reliable throughput source, incl. NFS-server transfer volume
-  # (nfsd io counters are 32-bit and wrap at 4 GiB — see inputs.exec below).
+  # This is the reliable throughput source, incl. NFS-server transfer volume.
+  # (nfsd io counters are 64-bit on our kernels . measured 38 TB on issaf . so
+  #  they do NOT wrap at 4 GiB; an earlier comment here claimed otherwise.)
 
 [[inputs.nstat]]
   # TCP/IP stack counters: retransmits + errors.
-  # Field names vary by kernel — run `telegraf --test` and tighten these globs
-  # to what your hosts actually emit.
   proc_net_netstat = "/proc/net/netstat"
   proc_net_snmp = "/proc/net/snmp"
   dump_zeros = true
-  fieldpass = ["*RetransSegs*","*Retrans*","*InErrs*","*OutRsts*","*Errors*","*Timeouts*","*Drop*"]
-
-[[inputs.systemd_units]]
-  # service health for future absent()/state alerting (active_code != 0 => not running).
-  # scope with `pattern` later if per-service cardinality grows too large.
+  fieldinclude = ["*RetransSegs*","*Retrans*","*InErrs*","*OutRsts*","*Errors*","*Timeouts*","*Drop*"]
 
 {% if telegraf_nfs %}
 ########## NFS server stats (this host only) ##########
@@ -83,6 +98,9 @@
 
 [[inputs.temp]]
   # hwmon thermal baseline (CPU/NVMe/chipset). World-readable, no setup needed.
+  # NOTE: NVMe controllers register hwmon zones, so NVMe temperature appears
+  # here AND under smart_device below. SATA/SAS have no hwmon entry . SMART is
+  # their only source. Pick one when building panels.
 
 {% if telegraf_ipmi %}
 [[inputs.ipmi_sensor]]
@@ -96,9 +114,17 @@
     name = ["cpu*_temp","system_temp","peripheral_temp","gpu*_temp","ps[0-9]*_status","psu[0-9]*_status"]
 {% endif %}
 {% if telegraf_smart %}
-# SMART (storage temperature) — plugin body deferred to the dedicated SMART session.
-# Gate is fact-driven (physical only); body to be added after device-enumeration is sorted.
-# [[inputs.smart]]
-#   attributes = false        # device-summary incl. temperature only
+[[inputs.smart]]
+  # SATA/SAS/NVMe device temperature + health. smartctl covers all three
+  # transports; nvme-cli is NOT required (composite temp comes from smartctl).
+  # Devices auto-discovered via `smartctl --scan`.
+  # REQUIRES the smartmontools package (not a telegraf dependency).
+  attributes = false        # device summary only. TRUE would emit one series
+                            # PER ATTRIBUTE PER DEVICE . do not enable fleet-wide.
+  use_sudo = false          # telegraf runs as root
+  nocheck = "standby"       # do not spin up sleeping disks just to read temp
+  timeout = "60s"           # fst nodes present ~90 devices; 30s default is tight
+  interval = "5m"           # disk temperature does not need 60s resolution
 {% endif %}
 {% endif %}
+

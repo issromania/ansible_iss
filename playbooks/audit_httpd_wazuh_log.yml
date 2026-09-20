@@ -1,0 +1,130 @@
+---
+# Read-only audit. Reports findings; changes nothing.
+#
+# Check A: URL-mapping directives in package-shipped conf.d files. All four
+#          vhost leaks found in Sept 2026 were package drop-ins carrying an
+#          unscoped Alias, inherited by every vhost on the host.
+# Check B: merged.mg size outliers, indicating a Wazuh group whose shared
+#          payload is not reaching agents.
+# Check C: httpd log files with no corresponding Wazuh <localfile> stanza.
+#          This is the gap that let a blocked Struts OGNL attack on
+#          inventory.spacescience.ro produce zero SIEM alerts.
+
+- name: Audit httpd vhost scoping and Wazuh log coverage
+  hosts: all
+  gather_facts: true
+
+  vars:
+    httpd_conf_root: /etc/httpd
+    wazuh_ossec_conf: /var/ossec/etc/ossec.conf
+    wazuh_merged: /var/ossec/etc/shared/merged.mg
+    # Stock EL files that legitimately carry server-scope URL mappings.
+    alias_allowlist_re: '/(welcome|autoindex)\.conf:'
+    # Hosts with no merged.mg by design (the manager is not an agent).
+    merged_exempt:
+      - sec.spacescience.ro
+
+  tasks:
+    - name: Detect httpd configuration
+      ansible.builtin.stat:
+        path: "{{ httpd_conf_root }}/conf/httpd.conf"
+      register: httpd_conf
+
+    - name: Detect Wazuh agent configuration
+      ansible.builtin.stat:
+        path: "{{ wazuh_ossec_conf }}"
+      register: ossec_conf
+
+    # --- Check A -----------------------------------------------------------
+    # Flags by file rather than by block nesting: a grep cannot determine
+    # whether a directive sits inside <VirtualHost>. URL mappings belong in
+    # your own vhost files, so any occurrence in conf.d warrants review.
+    - name: "Check A - URL-mapping directives in conf.d"
+      ansible.builtin.shell:
+        cmd: "grep -rnE '^[[:space:]]*(Alias|ScriptAlias|<Location|RewriteRule)' {{ httpd_conf_root }}/conf.d/ 2>/dev/null | grep -vE '{{ alias_allowlist_re }}' || true"
+      changed_when: false
+      register: check_a
+      when: httpd_conf.stat.exists
+
+    # --- Check C, part 1 ---------------------------------------------------
+    # Basenames only: ErrorLog paths are ServerRoot-relative while Wazuh uses
+    # absolute paths. Piped logs (CustomLog "|/usr/bin/...") are excluded.
+    - name: "Check C - enumerate httpd log basenames"
+      ansible.builtin.shell:
+        cmd: "grep -rhE '^[[:space:]]*(ErrorLog|CustomLog)' {{ httpd_conf_root }}/conf/httpd.conf {{ httpd_conf_root }}/conf.d/ 2>/dev/null | awk '{print $2}' | tr -d '\"' | grep -v '^|' | xargs -r -n1 basename | sort -u || true"
+      changed_when: false
+      register: httpd_logs
+      when: httpd_conf.stat.exists
+
+    - name: "Check C - enumerate Wazuh collected basenames"
+      ansible.builtin.shell:
+        cmd: "grep -oP '(?<=<location>)[^<]+' {{ wazuh_ossec_conf }} 2>/dev/null | grep -v '^journald$' | xargs -r -n1 basename | sort -u || true"
+      changed_when: false
+      register: wazuh_logs
+      when: ossec_conf.stat.exists
+
+    # --- Check B -----------------------------------------------------------
+    - name: "Check B - merged.mg size"
+      ansible.builtin.stat:
+        path: "{{ wazuh_merged }}"
+      register: check_b
+
+    # --- Per-host report ---------------------------------------------------
+    - name: "FINDING - Check A: URL mappings in package conf.d"
+      ansible.builtin.debug:
+        msg: >-
+          {{ check_a.stdout_lines }}
+          ACTION: confirm each is inside a <VirtualHost>. A bare Alias,
+          ScriptAlias, <Location> or RewriteRule at server scope is applied
+          by every vhost on this host, including public-facing ones.
+      when:
+        - check_a.stdout is defined
+        - check_a.stdout | length > 0
+
+    - name: "FINDING - Check C: httpd logs not sent to Wazuh"
+      ansible.builtin.debug:
+        msg: >-
+          {{ httpd_logs.stdout_lines | difference(wazuh_logs.stdout_lines) }}
+          ACTION: add a <localfile> stanza with <log_format>apache</log_format>
+          for each, in a top-level <ossec_config> block in
+          {{ wazuh_ossec_conf }}, then restart wazuh-agent.
+      when:
+        - httpd_logs.stdout_lines is defined
+        - wazuh_logs.stdout_lines is defined
+        - httpd_logs.stdout_lines | difference(wazuh_logs.stdout_lines) | length > 0
+
+    - name: "NOTE - httpd present but not audited (non-EL layout)"
+      ansible.builtin.debug:
+        msg: "ACTION: audit this host's Apache configuration manually."
+      when:
+        - not httpd_conf.stat.exists
+        - ansible_facts['os_family'] == 'Debian'
+
+    # --- Fleet aggregation -------------------------------------------------
+    - name: "Check B - merged.mg size across the fleet"
+      ansible.builtin.debug:
+        msg: |-
+          {% set sizes = [] %}
+          {% for h in ansible_play_hosts if h not in merged_exempt %}
+          {% set s = hostvars[h].check_b.stat.size | default(0) %}
+          {% set _ = sizes.append(s) %}
+          {% endfor %}
+          {% set mx = sizes | max %}
+          {% set odd = [] %}
+          {% for h in ansible_play_hosts if h not in merged_exempt %}
+          {% if (hostvars[h].check_b.stat.size | default(0)) < (mx - 1024) %}
+          {% set _ = odd.append(h ~ '=' ~ (hostvars[h].check_b.stat.size | default('absent'))) %}
+          {% endif %}
+          {% endfor %}
+          Largest merged.mg: {{ mx }} bytes.
+          {% if odd | length > 0 %}
+          FINDING: {{ odd }}
+          ACTION: these agents belong to a group whose shared directory lacks
+          files present in other groups. Compare
+          /var/ossec/etc/shared/<group>/ on the manager against the group
+          holding the largest payload.
+          {% else %}
+          OK: no outliers.
+          {% endif %}
+      run_once: true
+

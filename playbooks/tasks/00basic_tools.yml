@@ -160,26 +160,3 @@
   when: ansible_facts['virtualization_role'] != 'guest' and ansible_facts['distribution'] == 'Ubuntu'
   tags: packages
 
-- name: Smart temperature report
-  ansible.builtin.copy:
-    dest: /root/bin/
-    src: "{{ playbook_dir }}/../additions/storage_cmds/smart_temp_report"
-    owner: root
-    group: root
-    mode: '0700'
-    force: true
-  when: ansible_facts['virtualization_role'] != 'guest'
-
-- name: Add cron job for smart_temp_report
-  ansible.builtin.copy:
-    dest: "/etc/cron.d/smart_temp_report"
-    force: true
-    group: root
-    owner: root
-    mode: '0644'
-    content: |
-        SHELL=/usr/bin/bash
-        PATH=/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
-        MAILTO=root
-        */2 * * * * root /root/bin/smart_temp_report &> /tmp/smart_temp_report.log
-  when: ansible_facts['virtualization_role'] != 'guest'

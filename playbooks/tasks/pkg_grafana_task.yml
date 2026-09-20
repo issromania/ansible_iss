@@ -1,0 +1,18 @@
+- name: Grafana OSS repo
+  ansible.builtin.yum_repository:
+    name: grafana
+    description: grafana
+    baseurl: https://rpm.grafana.com
+    repo_gpgcheck: true
+    gpgcheck: true
+    gpgkey: https://rpm.grafana.com/gpg.key
+    sslverify: true
+    enabled: true
+  tags: packages
+
+- name: Install grafana (OSS)
+  ansible.builtin.dnf:
+    name: grafana
+    state: present
+  register: gf_pkg
+  tags: packages

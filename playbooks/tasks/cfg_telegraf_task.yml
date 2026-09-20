@@ -80,6 +80,13 @@
   ansible.builtin.systemd:
     name: telegraf
     enabled: true
-    state: "{{ 'restarted' if (tg_conf is changed or tg_override is changed or tg_purge is changed) else 'started' }}"
+    state: "{{ 'restarted' if (tg_conf is changed or tg_override is changed or tg_purge is changed or (tg_pkg is defined and tg_pkg is changed)) else 'started' }}"
     daemon_reload: true
+  tags: telegraf_cfg
+
+- name: Verify telegraf is actually running
+  ansible.builtin.command: systemctl is-active telegraf
+  register: tg_active
+  changed_when: false
+  failed_when: tg_active.stdout != "active"
   tags: telegraf_cfg

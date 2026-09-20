@@ -3,23 +3,24 @@
 - name: Import repo_influxdata_task.yml
   ansible.builtin.include_tasks: repo_influxdata_task.yml
 
-- name: Install telegraf (EL . AlmaLinux 9/10)
+- name: Install/update telegraf (EL . AlmaLinux 9/10)
   ansible.builtin.dnf:
     name: telegraf
-    state: present
+    state: latest
     enablerepo: "influxdata"
+  register: tg_pkg
   when:
     - ansible_facts['distribution'] == 'AlmaLinux'
     - ansible_facts['distribution_major_version'] | int >= 9
   tags: packages
 
-- name: Install telegraf (Debian/Ubuntu . 22/24)
+- name: Install/update telegraf (Debian/Ubuntu . 22/24)
   ansible.builtin.apt:
     name: telegraf
-    state: present
+    state: latest
     update_cache: true
+  register: tg_pkg
   when:
     - ansible_facts['distribution'] == 'Ubuntu'
     - ansible_facts['distribution_major_version'] | int >= 22
   tags: packages
-

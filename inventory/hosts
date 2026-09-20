@@ -215,3 +215,7 @@ VMS
 VMHOSTS
 misc
 
+[no_telegraf]
+emsys.spacescience.ro
+eumetsat.spacescience.ro
+

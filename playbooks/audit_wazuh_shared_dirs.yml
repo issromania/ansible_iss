@@ -1,0 +1,59 @@
+---
+# Read-only audit of the Wazuh manager's shared group directories.
+#
+# Context: agents receive only the shared files of the groups they belong to.
+# Wazuh does not merge 'default' into custom groups. When agents were moved
+# to custom groups, the 899 KB payload in 'default' - including
+# rootkit_files.txt and rootkit_trojans.txt - was orphaned and reached zero
+# of ~100 agents, leaving <check_files> and <check_trojans> declared but
+# not running fleet-wide.
+
+- name: Audit Wazuh shared group directory contents
+  hosts: sec.spacescience.ro
+  gather_facts: false
+
+  vars:
+    wazuh_shared_dir: /var/ossec/etc/shared
+    # Files expected in every Linux group directory.
+    required_files:
+      - rootkit_files.txt
+      - rootkit_trojans.txt
+    # Windows agents use win_*_rcl.txt instead of the Linux signatures.
+    exempt_groups:
+      - windows
+
+  tasks:
+    - name: Enumerate group directories
+      ansible.builtin.find:
+        paths: "{{ wazuh_shared_dir }}"
+        file_type: directory
+        recurse: false
+      register: wazuh_group_dirs
+
+    - name: Check required files in each group
+      ansible.builtin.stat:
+        path: "{{ wazuh_shared_dir }}/{{ item[0] }}/{{ item[1] }}"
+      loop: >-
+        {{ (wazuh_group_dirs.files | map(attribute='path') | map('basename')
+            | reject('in', exempt_groups) | list)
+           | product(required_files) | list }}
+      loop_control:
+        label: "{{ item[0] }}/{{ item[1] }}"
+      register: group_files
+
+    - name: "FINDING - group directories missing required shared files"
+      ansible.builtin.debug:
+        msg: >-
+          {{ group_files.results | rejectattr('stat.exists')
+             | map(attribute='item') | map('join', '/') | list }}
+          ACTION: copy the missing files from
+          {{ wazuh_shared_dir }}/default/ into each listed group directory,
+          owner wazuh, group wazuh, mode 0660. wazuh-remoted rebuilds
+          merged.mg and agents pick it up on next sync. No agent restart.
+      when: group_files.results | rejectattr('stat.exists') | list | length > 0
+
+    - name: "OK - all group directories carry the required shared files"
+      ansible.builtin.debug:
+        msg: "No findings."
+      when: group_files.results | rejectattr('stat.exists') | list | length == 0
+

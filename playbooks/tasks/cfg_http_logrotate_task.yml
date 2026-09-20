@@ -1,0 +1,127 @@
+# Standardise httpd logrotate configuration fleet-wide.
+#
+# Context: hosts examined during the Sept 2026 audit had differing retention,
+# none of it deliberate - all inherited whatever /etc/logrotate.conf happened
+# to carry. monitor kept 28 days uncompressed; isscloud kept 4 days with zstd.
+# The stanza below is self-contained so retention no longer depends on global
+# config drift, and so that `logrotate -d /etc/logrotate.d/httpd` behaves
+# identically to a production run (testing a single file does not read the
+# global config).
+
+- name: Detect EL-family httpd installation
+  ansible.builtin.stat:
+    path: /etc/httpd/conf/httpd.conf
+  register: httpd_conf
+
+# ansible.builtin.package selects dnf or dnf5 at runtime, so this works
+# unchanged on AlmaLinux 9 and 10.
+- name: Ensure zstd is present
+  ansible.builtin.package:
+    name: zstd
+    state: present
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - httpd_conf.stat.exists
+
+- name: Verify zstd binary path
+  ansible.builtin.stat:
+    path: /usr/bin/zstd
+  register: zstd_bin
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - httpd_conf.stat.exists
+
+# No `validate:` here. Tested: logrotate -d exits 0 on an unknown directive
+# and on an unclosed brace, so exit-code validation would pass a broken file.
+# The post-deploy check below inspects stderr text instead, which does catch
+# both. backup: true leaves a timestamped copy for rollback.
+- name: Deploy httpd logrotate configuration
+  ansible.builtin.copy:
+    dest: /etc/logrotate.d/httpd
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+    content: |
+      # Managed by Ansible. Self-contained: does not inherit rotate,
+      # compress or dateext from /etc/logrotate.conf.
+      /var/log/httpd/*log {
+          daily
+          rotate 30
+          dateext
+          create
+          missingok
+          notifempty
+          sharedscripts
+          delaycompress
+          compress
+          compresscmd /usr/bin/zstd
+          uncompresscmd /usr/bin/unzstd
+          compressext .zst
+          compressoptions -6 -T4 -q
+          postrotate
+              /bin/systemctl reload httpd.service > /dev/null 2>/dev/null || true
+          endscript
+      }
+  register: logrotate_deployed
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - httpd_conf.stat.exists
+    - zstd_bin.stat.exists | default(false)
+
+# Anchored to '^error:' deliberately: an unanchored match on 'error' hits the
+# literal filename error_log in the debug output and always false-positives.
+- name: Verify deployed configuration parses cleanly
+  ansible.builtin.shell:
+    cmd: "logrotate -d /etc/logrotate.d/httpd 2>&1 | grep '^error:' || true"
+  changed_when: false
+  register: logrotate_check
+  when: logrotate_deployed is changed
+
+- name: Fail if logrotate reports configuration errors
+  ansible.builtin.fail:
+    msg: >-
+      {{ logrotate_check.stdout_lines }}
+      The previous configuration is preserved as
+      {{ logrotate_deployed.backup_file | default('the backup file') }}.
+  when:
+    - logrotate_check.stdout is defined
+    - logrotate_check.stdout | length > 0
+
+# Changing compressext strands previously rotated archives: dateext prunes by
+# globbing log name + date + the *current* compressext, so .gz and .bz2 files
+# fall outside pruning and persist indefinitely. Observed on monitor, where
+# eight .bz2 files per log survived four rotation cycles.
+- name: Detect rotated archives orphaned by the compressext change
+  ansible.builtin.find:
+    paths: /var/log/httpd
+    patterns:
+      - '*.gz'
+      - '*.bz2'
+    recurse: false
+  register: orphaned_archives
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - httpd_conf.stat.exists
+
+- name: Report orphaned archives
+  ansible.builtin.debug:
+    msg: >-
+      {{ orphaned_archives.files | map(attribute='path') | list }}
+      ACTION: these sit outside logrotate's pruning glob now that compressext
+      is .zst, and will persist indefinitely. Either recompress them to .zst
+      (they then fall under rotate 30, and the oldest will eventually be
+      deleted) or move them out of /var/log/httpd to keep them permanently.
+  when:
+    - orphaned_archives.files is defined
+    - orphaned_archives.files | length > 0
+
+- name: Report hosts skipped
+  ansible.builtin.debug:
+    msg: >-
+      Skipped: no EL-family httpd at /etc/httpd/conf/httpd.conf.
+      ACTION: if Apache is present under a different layout, configure
+      logrotate manually.
+  when:
+    - ansible_facts['os_family'] == 'Debian'
+
