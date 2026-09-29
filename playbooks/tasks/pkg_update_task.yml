@@ -15,14 +15,20 @@
   ansible.builtin.dnf:
     name: '*'
     state: latest
+    nobest: true
     exclude:
       - 'cvmfs*'
       - 'eos-*'
+      - 'collabora*'
+      - 'coolwsd'
   register: pkg_update
   when: ansible_facts['os_family'] == 'RedHat'
 
-- name: Regenerate grub.cfg and push GRUB_CMDLINE_LINUX into BLS entries
+- name: Regenerate grub.cfg (push GRUB_CMDLINE_LINUX into BLS entries on EL9+)
   ansible.builtin.command:
-    cmd: grub2-mkconfig -o /boot/grub2/grub.cfg --update-bls-cmdline
+    cmd: >-
+      grub2-mkconfig -o /boot/grub2/grub.cfg
+      {{ '' if ansible_facts['distribution_major_version'] == '8' else '--update-bls-cmdline' }}
   changed_when: true
   when: ansible_facts['os_family'] == 'RedHat'
+
