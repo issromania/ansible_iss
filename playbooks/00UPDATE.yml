@@ -1,23 +1,7 @@
 ---
-- hosts: "{{ target }}"
-  gather_facts: False
+- name: Fleet update
+  hosts: "{{ target | default ('all') }}"
+  gather_facts: false
   tasks:
-  - name: OS upgrade EL7
-    ansible.builtin.yum:
-      name: '*'
-      state: latest
-      update_only: true
-      disablerepo: "eos*"
-    when: ansible_facts[ 'distribution' ] == 'CentOS' and ansible_facts['distribution_major_version'] == '7'
-
-  - name: OS upgrade dnf based distros
-    ansible.builtin.dnf:
-      name: '*'
-      state: latest
-      update_only: true
-      disablerepo: "eos*"
-    when: ansible_facts[ 'distribution' ] == 'AlmaLinux' or ansible_facts[ 'distribution' ] == 'Fedora'
-
-  - name: Re-create grub conf
-    ansible.builtin.command: /usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg --update-bls-cmdline
-
+    - name: Include tasks
+      ansible.builtin.include_tasks: tasks/pkg_update_task.yml

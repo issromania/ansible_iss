@@ -1,0 +1,28 @@
+---
+# playbooks/tasks/pkg_update_task.yml
+- name: Gather minimal facts on cold-cache hosts
+  ansible.builtin.setup:
+    gather_subset: min
+  when: ansible_facts['os_family'] is not defined
+
+- name: Clean dnf cache
+  ansible.builtin.command:
+    cmd: dnf clean all
+  changed_when: true
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Update all packages except cvmfs and eos-*
+  ansible.builtin.dnf:
+    name: '*'
+    state: latest
+    exclude:
+      - 'cvmfs*'
+      - 'eos-*'
+  register: pkg_update
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Regenerate grub.cfg and push GRUB_CMDLINE_LINUX into BLS entries
+  ansible.builtin.command:
+    cmd: grub2-mkconfig -o /boot/grub2/grub.cfg --update-bls-cmdline
+  changed_when: true
+  when: ansible_facts['os_family'] == 'RedHat'
