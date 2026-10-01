@@ -480,6 +480,9 @@ package_list:
   - root-unuran.x86_64
   - root-vecops.x86_64
   - root-xroofit.x86_64
+  - root-geom-checker
+  - root-roofit-codegen
+  - root-net-curl
   - python3-root.x86_64
   - python3-root+jupyroot.x86_64
   - openmpi.x86_64
