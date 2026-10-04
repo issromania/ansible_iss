@@ -19,6 +19,7 @@
     exclude:
       - 'cvmfs*'
       - 'eos-*'
+      - 'nordugrid-*'
       - 'collabora*'
       - 'coolwsd'
   register: pkg_update
