@@ -1,0 +1,48 @@
+---
+# Disable RDMA on Intel E810/X722 (irdma) and block the netlink autoload of ib_core.
+# No RDMA is used in the datacenter.
+# Runtime unload uses rmmod only: modprobe -r would also remove now-unused
+# dependencies such as ice/i40e and take the NIC down.
+
+- name: Deploy RDMA module block
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/irdma-disable.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Intel E810/X722 used as LAN-only; do not load the RDMA auxiliary driver
+      blacklist irdma
+      install irdma /bin/false
+      # RDMA core is autoloaded via netlink (net-pf-16-proto-20); no RDMA use on this host
+      blacklist ib_core
+      install ib_core /bin/false
+  when: ansible_facts['system'] == 'Linux'
+
+- name: Read loaded modules before irdma unload
+  ansible.builtin.slurp:
+    src: /proc/modules
+  register: rdma_modules_before
+  when: ansible_facts['system'] == 'Linux'
+
+- name: Unload irdma if loaded and unused
+  ansible.builtin.command:
+    cmd: rmmod irdma
+  changed_when: true
+  when:
+    - ansible_facts['system'] == 'Linux'
+    - (rdma_modules_before.content | b64decode) is search('^irdma [0-9]+ 0 ', multiline=True)
+
+- name: Read loaded modules after irdma unload
+  ansible.builtin.slurp:
+    src: /proc/modules
+  register: rdma_modules_after
+  when: ansible_facts['system'] == 'Linux'
+
+- name: Unload ib_core if loaded and unused
+  ansible.builtin.command:
+    cmd: rmmod ib_core
+  changed_when: true
+  when:
+    - ansible_facts['system'] == 'Linux'
+    - (rdma_modules_after.content | b64decode) is search('^ib_core [0-9]+ 0 ', multiline=True)

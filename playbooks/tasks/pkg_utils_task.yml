@@ -32,6 +32,7 @@
   ansible.builtin.file:
     path: /root/.config/htop
     state: directory
+    mode: '0644'
 
 - name: Configure htop EL9
   ansible.builtin.copy:
@@ -55,6 +56,5 @@
     - "additions/root_bin/mkconfig"
     - "additions/root_bin/kernel_list"
     - "additions/root_bin/sys_update"
+    - "additions/root_bin/kernels_cleanup"
   when: ansible_facts[ 'distribution' ] == 'AlmaLinux' or ansible_facts[ 'distribution' ] == 'Fedora'
-
-
