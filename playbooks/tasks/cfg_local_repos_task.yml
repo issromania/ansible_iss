@@ -34,6 +34,8 @@
 - name: Set local mirror root
   ansible.builtin.set_fact:
     mirror_root: "http://monitor.spacescience.ro/mirrors"
+    # EL10: EPEL "10z" is built for the current minor release (stock epel.repo on 10.N uses it); "10" is the next minor
+    epel_releasever: "{{ '10z' if ansible_facts['distribution_major_version'] == '10' else '$releasever' }}"
 
 # Single-line repos handled cleanly by ini_file. 'drop' = the upstream key to
 # remove (mirrorlist for AlmaLinux, metalink for EPEL). Only repos that have a
@@ -47,7 +49,7 @@
       - { file: almalinux-extras.repo,           section: extras,           drop: mirrorlist, baseurl: "{{ mirror_root }}/almalinux/$releasever/extras/x86_64/os/" }
       - { file: almalinux-highavailability.repo, section: highavailability, drop: mirrorlist, baseurl: "{{ mirror_root }}/almalinux/$releasever/HighAvailability/x86_64/os/" }
       - { file: almalinux-plus.repo,             section: plus,             drop: mirrorlist, baseurl: "{{ mirror_root }}/almalinux/$releasever/plus/x86_64/os/" }
-      - { file: epel.repo,                       section: epel,             drop: metalink,   baseurl: "{{ mirror_root }}/epel/$releasever/Everything/x86_64/" }
+      - { file: epel.repo,                       section: epel,             drop: metalink,   baseurl: "{{ mirror_root }}/epel/{{ epel_releasever }}/Everything/x86_64/" }
 
 # ELRepo sub-repos ship a FOLDED multi-line baseurl plus a mirrorlist. The
 # continuation lines must be stripped first (ini_file is line-oriented and would
