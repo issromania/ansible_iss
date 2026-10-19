@@ -5,19 +5,19 @@
 - name: Include repo_epel_task.yml
   ansible.builtin.include_tasks: repo_epel_task.yml
 
-- name: Remi key import - EL9
+- name: Remi key import - EL9/10
   ansible.builtin.rpm_key:
-    key: https://rpms.remirepo.net/enterprise/9/RPM-GPG-KEY-remi
+    key: https://rpms.remirepo.net/enterprise/{{ ansible_facts["distribution_major_version"] }}/RPM-GPG-KEY-remi
     state: present
-  when: ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] == '9'
+  when: ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10']
   tags: repo
 
-- name: Install remi repository EL9
+- name: Install remi repository EL9/10
   ansible.builtin.dnf:
     name:
-      - https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+      - https://rpms.remirepo.net/enterprise/remi-release-{{ ansible_facts["distribution_major_version"] }}.rpm
     state: present
-  when: ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] == '9'
+  when: ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10']
   tags: repo
 
 - name: Remi key import - Fedora

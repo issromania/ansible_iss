@@ -1,0 +1,40 @@
+---
+- name: Include repo_epel_task.yml
+  ansible.builtin.include_tasks: repo_epel_task.yml
+
+- name: Include repo_dockerce_task.yml
+  ansible.builtin.include_tasks: repo_dockerce_task.yml
+
+- name: Include repo_kubernetes_task.yml
+  ansible.builtin.include_tasks: repo_kubernetes_task.yml
+
+- name: Install Kubernetes dependencies
+  ansible.builtin.dnf:
+    name: ['runc', 'containerd.io.x86_64', 'containernetworking-plugins.x86_64', 'containers-common-extra']
+    state: present
+
+# - name: Print output
+#   ansible.builtin.debug:
+#     msg: "{{ ansible_facts }}"
+
+- name: Install Kubernetes packages on RedHat/CentOS
+  ansible.builtin.dnf:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+    disable_excludes: kubernetes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Lock Kubernetes package versions
+  ansible.builtin.command: "dnf versionlock add {{ item }}"
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+  register: versionlock_result
+  changed_when: "'Adding versionlock' in versionlock_result.stdout"
+  failed_when:
+    - versionlock_result.rc != 0
+    - "'already locked' not in versionlock_result.stderr"

@@ -4,7 +4,22 @@
     name: elrepo-release.noarch
     state: present
     update_cache: false
-  when: ansible_facts[ 'distribution' ] == 'AlmaLinux'
+  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] == '9'
+  tags: repo
+
+- name: ElRepo key import - EL10
+  ansible.builtin.rpm_key:
+    key: https://www.elrepo.org/RPM-GPG-KEY-v2-elrepo.org
+    state: present
+  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] == '10'
+  tags: repo
+
+- name: Enable ElRepo Repository on EL 10
+  ansible.builtin.dnf:
+    name: https://www.elrepo.org/elrepo-release-10.el10.elrepo.noarch.rpm
+    state: present
+    update_cache: false
+  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] == '10'
   tags: repo
 
 - name: Enable permanently elrepo
@@ -36,4 +51,3 @@
     mode: '0644'
     create: false
   when: ansible_facts[ 'distribution' ] == 'AlmaLinux'
-

@@ -1,0 +1,16 @@
+---
+- name: Import DOCKER-CE RPM key
+  ansible.builtin.rpm_key:
+    state: present
+    key: https://download.docker.com/linux/centos/gpg
+  tags: rpmkey
+
+- name: Install DOCKER-CE repository
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+    force: true
+    mode: "0644"
+    owner: root
+    group: root
+  tags: repo

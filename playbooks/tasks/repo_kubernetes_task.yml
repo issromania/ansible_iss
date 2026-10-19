@@ -1,0 +1,15 @@
+---
+- name: Add Kubernetes repository
+  ansible.builtin.yum_repository:
+    name: kubernetes
+    description: Kubernetes Repository
+    baseurl: https://pkgs.k8s.io/core:/stable:/v1.35/rpm/
+    enabled: true
+    gpgcheck: true
+    gpgkey: https://pkgs.k8s.io/core:/stable:/v1.35/rpm/repodata/repomd.xml.key
+    exclude: kubelet kubeadm kubectl cri-tools kubernetes-cni
+
+- name: Install yum-plugin-versionlock
+  ansible.builtin.dnf:
+    name: python3-dnf-plugin-versionlock
+    state: present
