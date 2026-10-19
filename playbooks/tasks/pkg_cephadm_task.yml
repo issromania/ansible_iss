@@ -1,0 +1,12 @@
+---
+- name: Include repo_ceph_task.yml
+  ansible.builtin.include_tasks: repo_ceph_task.yml
+
+- name: Install CEPH packages and dependencies
+  ansible.builtin.dnf:
+    name:
+      - cephadm.noarch
+      - ceph-common
+    state: present
+    enablerepo: "ceph,epel"
+  tags: packages
