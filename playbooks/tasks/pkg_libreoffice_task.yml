@@ -1,0 +1,48 @@
+---
+# LibreOffice (TDF RPMs) from the ISS repository on monitor (issrepo).
+# Package list and branch come from the metadata published with the repo.
+# Vendor LibreOffice packages of any other branch are removed first.
+- name: LibreOffice (TDF RPMs via issrepo)
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - ansible_facts['architecture'] == 'x86_64'
+    - ansible_facts['distribution_major_version'] in ['9', '10']
+  vars:
+    issrepo_url: https://monitor.spacescience.ro/issrepo
+    lo_meta: /var/www/html/issrepo/meta/libreoffice.yml
+  block:
+    # Only x86_64 is published; literal arch avoids $basearch differences
+    # (e.g. x86_64_v2 builds).
+    - name: Configure issrepo
+      ansible.builtin.yum_repository:
+        name: issrepo
+        description: ISS local repository
+        baseurl: "{{ issrepo_url }}/el{{ ansible_facts['distribution_major_version'] }}/x86_64/"
+        gpgcheck: false
+        enabled: true
+
+    - name: Load published LibreOffice metadata
+      ansible.builtin.include_vars:
+        file: "{{ lo_meta }}"
+
+    - name: Gather installed packages
+      ansible.builtin.package_facts:
+        manager: rpm
+
+    - name: Remove LibreOffice packages of other branches
+      ansible.builtin.dnf:
+        name: "{{ lo_other }}"
+        state: absent
+      vars:
+        lo_other: >-
+          {{ ansible_facts['packages'].keys()
+             | select('match', '^(libreoffice|libobasis)[0-9]+[.][0-9]+(-|$)')
+             | reject('match', '^(libreoffice|libobasis)' ~ (lo_branch | regex_escape) ~ '(-|$)')
+             | list }}
+      when: lo_other | length > 0
+
+    - name: Install or update LibreOffice
+      ansible.builtin.dnf:
+        name: "{{ lo_packages }}"
+        state: latest
+        update_cache: true

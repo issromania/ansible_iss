@@ -1,0 +1,7 @@
+---
+- name: Install LibreOffice (TDF RPMs)
+  hosts: "{{ target }}"
+  gather_facts: true
+  tasks:
+    - name: LibreOffice tasks
+      ansible.builtin.import_tasks: tasks/pkg_libreoffice_task.yml
