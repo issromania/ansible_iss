@@ -1,0 +1,41 @@
+---
+- name: Remove duplicate GRUB_TIMEOUT/GRUB_DEFAULT lines (keep the first)
+  ansible.builtin.replace:
+    path: /etc/default/grub
+    after: '(?m)^{{ item }}=[^\n]*'
+    regexp: '^{{ item }}=.*\n?'
+    replace: ''
+  loop:
+    - GRUB_TIMEOUT
+    - GRUB_DEFAULT
+  register: grub_dedup
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Set GRUB_TIMEOUT and GRUB_DEFAULT
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    regexp: '^{{ item.key }}='
+    line: '{{ item.key }}={{ item.value }}'
+  loop:
+    - { key: GRUB_TIMEOUT, value: '1' }
+    - { key: GRUB_DEFAULT, value: '0' }
+  register: grub_settings
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Ensure GRUB_DISABLE_OS_PROBER=true right after GRUB_TIMEOUT
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_DISABLE_OS_PROBER='
+    line: 'GRUB_DISABLE_OS_PROBER=true'
+    insertafter: '^GRUB_TIMEOUT='
+    firstmatch: true
+  register: grub_os_prober
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Regenerate grub.cfg when /etc/default/grub changed
+  ansible.builtin.command:
+    cmd: grub2-mkconfig -o /boot/grub2/grub.cfg
+  changed_when: true
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - grub_dedup is changed or grub_settings is changed or grub_os_prober is changed

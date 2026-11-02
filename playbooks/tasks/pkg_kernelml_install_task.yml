@@ -1,5 +1,6 @@
 ---
-- include_tasks: repo_elrepo_task.yml
+- name: Include repo_elrepo_task.yml
+  ansible.builtin.include_tasks: repo_elrepo_task.yml
 
 - name: Install kernel-ml EL9
   ansible.builtin.dnf:
@@ -16,17 +17,5 @@
   when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] == '9'
   tags: packages
 
-- name: Set grub default to 0
-  ansible.builtin.lineinfile: path="/etc/default/grub" regexp='GRUB_DEFAULT="(.*)"' line='GRUB_DEFAULT=0'
-
-- name: Set grub timeout to 2
-  ansible.builtin.lineinfile: path="/etc/default/grub" regexp='GRUB_TIMEOUT="(.*)"' line='GRUB_TIMEOUT=2'
-
-- name: Re-create grub conf - EL9/10
-  ansible.builtin.command: /usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg --update-bls-cmdline
-  when: ansible_facts[ 'distribution' ] == 'AlmaLinux'
-
-
-## NOT NEEDED
-##      - kernel-ml-devel.x86_64
-##      - kernel-ml-devel-matched.x86_64
+- name: Include cfg_grub_task.yml
+  ansible.builtin.include_tasks: cfg_grub_task.yml
