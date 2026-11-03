@@ -1,15 +1,45 @@
 ---
-- name: Import CernVM RPM key
+# CernVM-FS repository for EL9/EL10 (AlmaLinux), Fedora, Debian, Ubuntu
+# Keys:
+#   RPM-GPG-KEY-CernVM      : DSA-1024, 230D389D8AE45CE7 (signs EL9 and Fedora packages)
+#   RPM-GPG-KEY-CernVM-2048 : RSA-4096, 8CE0A76C497EA957 (signs EL10 packages and apt InRelease)
+# rpm on EL>=10 rejects the DSA key; cvmfs-release %post also drops it from cernvm.repo on EL>=10.
+# Debian/Ubuntu: cvmfs-release deb ships both keys and links the per-codename list (with fallback).
+
+# Plays run with gather_facts: False; gather the minimal subset only on a cold fact cache.
+- name: Ensure distribution facts are available
+  ansible.builtin.setup:
+    gather_subset:
+      - min
+  when: "'os_family' not in ansible_facts"
+  tags: always
+
+- name: Import CernVM RPM key RSA-4096 (EL, Fedora)
   ansible.builtin.rpm_key:
     state: present
-    key: "{{ item }}"
-  loop:
-    - https://cvmrepo.web.cern.ch/cvmrepo/yum/RPM-GPG-KEY-CernVM
-    - https://cvmrepo.web.cern.ch/cvmrepo/yum/RPM-GPG-KEY-CernVM-2048
+    key: https://cvmrepo.s3.cern.ch/cvmrepo/yum/RPM-GPG-KEY-CernVM-2048
+  when: ansible_facts['os_family'] == 'RedHat'
   tags: rpmkey
 
-- name: Install CVMFS repository
-  ansible.builtin.yum:
-    name: http://cvmrepo.web.cern.ch/cvmrepo/yum/cvmfs-release-latest.noarch.rpm
+- name: Import CernVM RPM key DSA-1024 (EL<10, Fedora)
+  ansible.builtin.rpm_key:
     state: present
+    key: https://cvmrepo.s3.cern.ch/cvmrepo/yum/RPM-GPG-KEY-CernVM
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - ansible_facts['distribution'] == 'Fedora' or ansible_facts['distribution_major_version'] | int < 10
+  tags: rpmkey
+
+- name: Install CVMFS repository (EL, Fedora)
+  ansible.builtin.dnf:
+    name: https://cvmrepo.s3.cern.ch/cvmrepo/yum/cvmfs-release-latest.noarch.rpm
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: repo
+
+- name: Install CVMFS repository (Debian, Ubuntu)
+  ansible.builtin.apt:
+    deb: https://cvmrepo.s3.cern.ch/cvmrepo/apt/cvmfs-release-latest_all.deb
+    state: present
+  when: ansible_facts['os_family'] == 'Debian'
   tags: repo

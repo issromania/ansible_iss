@@ -1,12 +1,22 @@
 ---
-- name: include repo_cernvm_task.yml
+- name: Include repo_cernvm_task.yml
   ansible.builtin.include_tasks: repo_cernvm_task.yml
 
-- name: Install CVMFS packages and dependencies
+- name: Install CVMFS packages and dependencies (EL, Fedora)
   ansible.builtin.dnf:
     name: ['autofs', 'cvmfs']
     state: present
-    enablerepo: "cernvm,cernvm-config"
+    enablerepo: "cernvm"
     disablerepo: "UMD*,wlcg"
+  when: ansible_facts['os_family'] == 'RedHat'
   tags: packages
 
+# autofs is only a Recommends of the cvmfs deb, so it stays explicit.
+# No cache_valid_time: the cache must be refreshed after cernvm.list is added.
+- name: Install CVMFS packages and dependencies (Debian, Ubuntu)
+  ansible.builtin.apt:
+    name: ['autofs', 'cvmfs']
+    state: present
+    update_cache: true
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: packages
