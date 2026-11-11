@@ -1,0 +1,5 @@
+---
+- hosts: "{{ target | default('all') }}"
+  gather_facts: False
+  tasks:
+  - include_tasks: tasks/cfg_pakiti_client_task.yml

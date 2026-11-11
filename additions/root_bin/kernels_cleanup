@@ -1,0 +1,75 @@
+#!/usr/bin/python3
+"""Remove every installed kernel* package except the newest version of each
+(name, arch) and the running kernel, then regenerate grub.cfg.
+
+Red Hat family only. Removal is delegated to `dnf remove`; extra arguments are
+passed through, e.g. `--assumeno` for a dry run or `-y` for non-interactive use.
+grub2-mkconfig runs only if dnf removed something successfully.
+"""
+
+import os
+import subprocess
+import sys
+from functools import cmp_to_key
+
+
+def os_release():
+    info = {}
+    with open("/etc/os-release") as f:
+        for line in f:
+            key, sep, value = line.rstrip("\n").partition("=")
+            if sep:
+                info[key] = value.strip("\"'")
+    return info
+
+
+OSR = os_release()
+if not (OSR.get("ID") in ("rhel", "ol", "fedora") or "rhel" in OSR.get("ID_LIKE", "").split()):
+    sys.exit(f"unsupported OS '{OSR.get('ID', 'unknown')}': Red Hat family (EL/Fedora) only")
+
+import rpm  # noqa: E402 -- after the family check; the module is absent on non-EL systems
+
+
+def kernel_release(h):
+    # Same form as `uname -r`: VERSION-RELEASE.ARCH
+    return f"{h[rpm.RPMTAG_VERSION]}-{h[rpm.RPMTAG_RELEASE]}.{h[rpm.RPMTAG_ARCH]}"
+
+
+def evr(h):
+    return (str(h[rpm.RPMTAG_EPOCH] or 0), h[rpm.RPMTAG_VERSION], h[rpm.RPMTAG_RELEASE])
+
+
+def main():
+    protected = {os.uname().release}
+
+    groups = {}
+    for h in rpm.TransactionSet().dbMatch():
+        name = h[rpm.RPMTAG_NAME]
+        if name == "kernel" or name.startswith("kernel-"):
+            groups.setdefault((name, h[rpm.RPMTAG_ARCH]), []).append(h)
+
+    remove = []
+    for hdrs in groups.values():
+        hdrs.sort(key=cmp_to_key(lambda a, b: rpm.labelCompare(evr(a), evr(b))))
+        for h in hdrs[:-1]:  # everything except the newest
+            if kernel_release(h) not in protected:
+                remove.append(f"{h[rpm.RPMTAG_NAME]}-{kernel_release(h)}")
+
+    print("protected:", " ".join(sorted(protected)))
+    if not remove:
+        print("nothing to remove")
+        return 0
+
+    rc = subprocess.run(["dnf", "remove", *sys.argv[1:], *sorted(remove)]).returncode
+    if rc != 0:
+        return rc
+
+    mkconfig = ["grub2-mkconfig", "-o", "/boot/grub2/grub.cfg"]
+    if OSR.get("VERSION_ID", "").split(".")[0] != "8":  # EL8/OL8 grub2 lacks the flag
+        mkconfig.append("--update-bls-cmdline")
+    return subprocess.run(mkconfig).returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+

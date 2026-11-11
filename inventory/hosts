@@ -63,7 +63,7 @@ inventory_cluster = alien
 
 #########################################################################
 [wn_issaf:vars]
-ansible_ssh_private_key_file = /root/.ssh/id_ed25519
+#ansible_ssh_private_key_file = /root/.ssh/id_ed25519
 
 [wn_issaf]
 
@@ -189,7 +189,8 @@ inventory_cluster = lisa
 [nfs_metrics]
 issaf.spacescience.ro
 alien.spacescience.ro
-nfs01  ansible_host=10.99.99.200    ## ansible_ssh_extra_args=' -J root@issaf.spacescience.ro ' ansible_ssh_private_key_file=/root/.ssh/id_ed25519
+nfs01  ansible_host=10.99.99.200
+## ansible_ssh_extra_args=' -J root@issaf.spacescience.ro ' ansible_ssh_private_key_file=/root/.ssh/id_ed25519
 
 [nfs_metrics:vars]
 telegraf_nfs = true
