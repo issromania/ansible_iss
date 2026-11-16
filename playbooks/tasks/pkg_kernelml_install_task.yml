@@ -2,7 +2,7 @@
 - name: Include repo_elrepo_task.yml
   ansible.builtin.include_tasks: repo_elrepo_task.yml
 
-- name: Install kernel-ml EL9
+- name: Install kernel-ml EL9/EL10
   ansible.builtin.dnf:
     name:
       - kernel-ml.x86_64
@@ -14,7 +14,7 @@
       - kernel-ml-tools-libs-devel.x86_64
     state: present
     enablerepo: "elrepo,elrepo-kernel,elrepo-extras"
-  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] == '9'
+  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] in ['9', '10']
   tags: packages
 
 - name: Include cfg_grub_task.yml
