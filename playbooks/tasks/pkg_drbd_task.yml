@@ -10,17 +10,27 @@
     name:
       - kmod-drbd9x
       - drbd9x-utils
-      - drbdlinks
     state: present
     disablerepo: "wlcg"
     enablerepo: "epel,elrepo"
     exclude: ""
   tags: packages
 
+# Not packaged in EPEL 10.
+- name: Install drbdlinks (EL9)
+  ansible.builtin.dnf:
+    name: drbdlinks
+    state: present
+    disablerepo: "wlcg"
+    enablerepo: "epel,elrepo"
+    exclude: ""
+  when: ansible_facts['distribution_major_version'] == '9'
+  tags: packages
+
 - name: Load drbd module
   ansible.builtin.copy:
     dest: "/etc/modules-load.d/drbd.conf"
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     force: true
@@ -30,10 +40,9 @@
 - name: Load drbd module in dracut
   ansible.builtin.copy:
     dest: "/etc/dracut.conf.d/dracut.conf"
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     force: true
     content: |
         add_drivers+=" drbd "
-
