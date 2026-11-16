@@ -1,10 +1,13 @@
 ---
-- name: Install hardware monitoring tools on hardware machines (not vms) - EL9
+- name: Install hardware monitoring tools on hardware machines (not vms) - EL9/EL10
   ansible.builtin.dnf:
     name: [ledmon, lsscsi, sasutils, sdparm, sg3_utils, smp_utils]
     state: present
     update_cache: false
-  when: ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] == '9' ) or ansible_facts['distribution'] == 'Fedora'
+  when:
+    - ansible_facts['virtualization_role'] != 'guest'
+    - >-
+      ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10'] ) or ansible_facts['distribution'] == 'Fedora'
 
 - name: Include pkg_niccli_task.yml
   ansible.builtin.include_tasks: pkg_niccli_task.yml
@@ -41,15 +44,22 @@
     - additions/seagate_seachest/bin/seachest_generictests
     - additions/seagate_seachest/bin/seachest_nvme
     - additions/seagate_seachest/bin/seachest_security
+  when:
+    - ansible_facts['virtualization_role'] != 'guest'
+    - >-
+      ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10'] ) or ansible_facts['distribution'] == 'Fedora'
 
-- name: Install from pip the jc module
+- name: Install from pip the sasutils and rich modules
   ansible.builtin.pip:
     executable: pip3
     name:
       - sasutils
-      - rich
     extra_args: --user
     state: present
+  when:
+    - ansible_facts['virtualization_role'] != 'guest'
+    - >-
+      ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10'] ) or ansible_facts['distribution'] == 'Fedora'
 
 - name: Sync storage tools
   ansible.builtin.copy:
@@ -70,6 +80,10 @@
     - iostat_md
     - list_storage
     - smartctl_dump
+  when:
+    - ansible_facts['virtualization_role'] != 'guest'
+    - >-
+      ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10'] ) or ansible_facts['distribution'] == 'Fedora'
 
 - name: Sync md format tools
   ansible.builtin.copy:
@@ -86,4 +100,7 @@
     - format_md_component
     - format_mdraid
     - select_disk_range
-
+  when:
+    - ansible_facts['virtualization_role'] != 'guest'
+    - >-
+      ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10'] ) or ansible_facts['distribution'] == 'Fedora'

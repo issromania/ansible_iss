@@ -4,12 +4,20 @@
     src: "{{ playbook_dir }}/../additions/broadcom_net/niccli.rpm"
     dest: /tmp/niccli.rpm
     mode: '0644'
+  when:
+    - ansible_facts['virtualization_role'] != 'guest'
+    - >-
+      ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10'] ) or ansible_facts['distribution'] == 'Fedora'
 
 - name: Install niccli rpm
   ansible.builtin.dnf:
     name: /tmp/niccli.rpm
     disable_gpg_check: true
     state: latest
+  when:
+    - ansible_facts['virtualization_role'] != 'guest'
+    - >-
+      ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10'] ) or ansible_facts['distribution'] == 'Fedora'
 
 - name: Remove niccli rpm
   ansible.builtin.file:

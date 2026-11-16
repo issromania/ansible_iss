@@ -12,3 +12,11 @@
   tags: packages
   register: python_install_result
   changed_when: false
+
+- name: Install from pip the rich module
+  ansible.builtin.pip:
+    executable: pip3
+    name:
+      - rich
+    extra_args: --user
+    state: present
