@@ -1,21 +1,22 @@
 ---
-- include_tasks: repo_frontier_task.yml
+- name: Include repo_frontier_task.yml
+  ansible.builtin.include_tasks: repo_frontier_task.yml
 
-- name: create squid dirs
-  file:
+- name: Create squid dirs
+  ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    mode: 0755
+    mode: "0755"
   with_items:
     - /etc/squid
     - "{{ frontier_logs }}"
     - "{{ frontier_cache }}"
 
 - name: Create squidconf
-  copy:
+  ansible.builtin.copy:
     dest: "/etc/squid/squidconf"
     force: true
-    mode: 0644
+    mode: "0644"
     content: |
       export FRONTIER_USER=frontier
       export FRONTIER_GROUP=frontier
@@ -29,7 +30,7 @@
     enablerepo: "cern-frontier"
   tags: packages
 
-- name: frontier squid customizations
+- name: Frontier squid customizations
   ansible.builtin.template:
     src: "{{ playbook_dir }}/../additions/frontier/customize.sh.j2"
     dest: /etc/squid/customize.sh
@@ -39,8 +40,8 @@
     backup: true
     force: true
 
-- name: proper ownership
-  file:
+- name: Proper ownership
+  ansible.builtin.file:
     path: "{{ item }}"
     owner: frontier
     group: frontier
