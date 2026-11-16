@@ -30,4 +30,3 @@
     update_cache: false
   when: ansible_facts['distribution'] == 'Fedora'
   tags: packages
-
