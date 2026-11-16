@@ -4,3 +4,4 @@ skip_list:
   - brackets
   - empty-lines
   - line-length
+  - no-handler
