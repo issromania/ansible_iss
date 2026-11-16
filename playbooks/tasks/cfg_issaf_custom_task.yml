@@ -11,4 +11,3 @@
     state: link
     force: false
   when: libtinfo6_stat.stat.exists
-
