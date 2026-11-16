@@ -21,3 +21,4 @@
   ansible.builtin.file:
     path: /root/tuning.d
     state: directory
+    mode: '0755'
