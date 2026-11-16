@@ -28,7 +28,7 @@
 #   wazuh_agent_group     : Wazuh agent group       (default: default)
 #   wazuh_agent_version   : Version string for Windows MSI URL (default: 4.14.1)
 
-- name: wazuh | Refuse to install the agent on the manager
+- name: Wazuh | Refuse to install the agent on the manager
   ansible.builtin.assert:
     that: inventory_hostname != 'sec.spacescience.ro'
     fail_msg: "sec is the Wazuh manager. Do not install the agent here."
@@ -63,7 +63,7 @@
       priority=1
   when: ansible_facts[ 'os_family' ] == "RedHat"
 
-- name: wazuh | Require manager address
+- name: Wazuh | Require manager address
   ansible.builtin.assert:
     that: wazuh_manager_ip is defined and wazuh_manager_ip | length > 0
     fail_msg: "wazuh_manager_ip is not set for {{ inventory_hostname }}"
@@ -157,7 +157,7 @@
   failed_when: false
   when: ansible_facts[ 'os_family' ] == "Debian"
 
-- name: "[DEB] Install prerequisites"
+- name: "[DEB] Install prerequisites"  # noqa: command-instead-of-module
   ansible.builtin.command:
     cmd: apt-get update -qq
   environment:
@@ -167,7 +167,7 @@
     - "'install ok installed' not in _deb_prereq.stdout | default('')"
   changed_when: false
 
-- name: "[DEB] Install gnupg and apt-transport-https"
+- name: "[DEB] Install gnupg and apt-transport-https"  # noqa: command-instead-of-module
   ansible.builtin.command:
     cmd: apt-get install -y -q gnupg apt-transport-https
   environment:
@@ -175,6 +175,7 @@
   when:
     - ansible_facts[ 'os_family' ] == "Debian"
     - "'install ok installed' not in _deb_prereq.stdout | default('')"
+  changed_when: true
 
 - name: "[DEB] Download Wazuh GPG key"
   ansible.builtin.get_url:
@@ -225,7 +226,7 @@
          or (wazuh_agent_state | default('present') == 'latest') }}
   when: ansible_facts[ 'os_family' ] == "Debian"
 
-- name: "[DEB] Update apt cache after repo deployment"
+- name: "[DEB] Update apt cache after repo deployment"  # noqa: command-instead-of-module
   # Only when the agent is not yet installed. apt-get update on every run for
   # an already-installed agent is wasted time on 2 hosts.
   ansible.builtin.command:
@@ -237,7 +238,7 @@
     - _deb_needs_pkg | bool
   changed_when: false
 
-- name: "[DEB] Install or upgrade wazuh-agent package"
+- name: "[DEB] Install or upgrade wazuh-agent package"  # noqa: command-instead-of-module
   # WAZUH_MANAGER / WAZUH_AGENT_NAME / WAZUH_AGENT_GROUP are consumed by the
   # DEB postinst scriptlet and written into /var/ossec/etc/ossec.conf on FRESH
   # INSTALL ONLY. On an existing install they are discarded -- group drift is
@@ -375,7 +376,8 @@
   # wazuh_manager_ip may be an FQDN. On a correctly configured single-manager
   # host, the only connection on dport 1514 will be to the Wazuh manager.
   ansible.builtin.shell:
-    cmd: "ss -tn state established '( dport = :1514 )' | grep -q ':1514'"
+    cmd: "set -o pipefail; ss -tn state established '( dport = :1514 )' | grep ':1514'"
+    executable: /bin/bash
   register: _wazuh_conn_linux
   retries: 6
   delay: 5
@@ -395,5 +397,3 @@
   changed_when: false
   failed_when: _wazuh_conn_win.rc != 0
   when: ansible_facts[ 'os_family' ] == "Windows"
-
-
