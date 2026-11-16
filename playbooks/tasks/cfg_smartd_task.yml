@@ -55,6 +55,7 @@
 
 - name: Update /usr/share/smartmontools/drivedb.h
   ansible.builtin.command: /usr/sbin/update-smart-drivedb -u github --trunk --no-verify
+  changed_when: true
 
 - name: Restart smartd
   ansible.builtin.systemd:
