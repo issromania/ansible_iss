@@ -10,8 +10,15 @@
 
 - name: Install Kubernetes dependencies
   ansible.builtin.dnf:
-    name: ['runc', 'containerd.io.x86_64', 'containernetworking-plugins.x86_64', 'containers-common-extra']
+    name: ['runc', 'containerd.io.x86_64', 'containers-common-extra']
     state: present
+
+# Removed from EL10 (obsoleted by containers-common); CNI plugins come from kubernetes-cni there.
+- name: Install containernetworking-plugins (EL9)
+  ansible.builtin.dnf:
+    name: containernetworking-plugins.x86_64
+    state: present
+  when: ansible_facts['distribution_major_version'] == '9'
 
 # - name: Print output
 #   ansible.builtin.debug:
