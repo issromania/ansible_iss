@@ -12,6 +12,7 @@
   ansible.builtin.file:
     path: /root/bin
     state: directory
+    mode: "0755"
   when:
     - ansible_facts['distribution'] in ['AlmaLinux', 'Ubuntu']
     - pakiti_injector.stat.exists
@@ -54,4 +55,3 @@
   when:
     - ansible_facts['distribution'] in ['AlmaLinux', 'Ubuntu']
     - pakiti_injector.stat.exists
-
