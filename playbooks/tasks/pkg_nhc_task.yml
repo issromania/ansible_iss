@@ -1,9 +1,10 @@
 ---
-- name: Install NHC health script EL9
+- name: Install NHC health script EL9/EL10
   ansible.builtin.dnf:
     name: https://github.com/mej/nhc/releases/download/1.4.3/lbnl-nhc-1.4.3-1.el8.noarch.rpm
     state: present
     disable_gpg_check: true
-  when: ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] == '9' ) or ansible_facts['distribution'] == 'Fedora'
+  when: >-
+    ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10'] )
+    or ansible_facts['distribution'] == 'Fedora'
   tags: packages
-
