@@ -1,5 +1,5 @@
 ---
-- name: include pkg_mlsensor_task.yml
+- name: Include pkg_mlsensor_task.yml
   ansible.builtin.include_tasks: pkg_mlsensor_task.yml
 
 - name: Mlsensor config
@@ -16,4 +16,3 @@
     name: mlsensor
     state: restarted
     enabled: true
-
