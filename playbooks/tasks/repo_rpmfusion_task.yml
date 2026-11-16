@@ -5,13 +5,13 @@
 - name: Include repo_epel_task.yml
   ansible.builtin.include_tasks: repo_epel_task.yml
 
-- name: Install rpmfusion repository EL9
+- name: Install rpmfusion repository EL9/EL10
   ansible.builtin.dnf:
     name:
-      - https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-9.noarch.rpm
-      - https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-9.noarch.rpm
+      - https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-{{ ansible_facts["distribution_major_version"] }}.noarch.rpm
+      - https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-{{ ansible_facts["distribution_major_version"] }}.noarch.rpm
     state: present
-  when: ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] == '9'
+  when: ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10']
   tags: repo
 
 - name: Install rpmfusion repository Fedora
