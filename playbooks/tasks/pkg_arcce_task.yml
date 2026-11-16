@@ -2,7 +2,7 @@
 - name: Include repo_nordugrid_task.yml
   ansible.builtin.include_tasks: repo_nordugrid_task.yml
 
-- name: Install arcce-wn EL9
+- name: Install arcce-wn EL9/EL10
   ansible.builtin.dnf:
     name:
       - bash-completion
@@ -17,7 +17,7 @@
     state: present
     enablerepo: "epel,nordugrid,nordugrid-updates"
     disablerepo: "UMD*"
-  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] == '9'
+  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] in ['9', '10']
   tags: packages
 
 - name: Install arcce-wn Fedora
