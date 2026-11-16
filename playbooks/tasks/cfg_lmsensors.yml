@@ -2,6 +2,7 @@
 - name: Configure lm_sensors
   ansible.builtin.command: /usr/sbin/sensors-detect --auto
   register: lmsensors_config
+  changed_when: true
 
 - name: Enable and start
   ansible.builtin.systemd:
@@ -9,4 +10,3 @@
     state: restarted
     enabled: true
   when: lmsensors_config is succeeded
-
