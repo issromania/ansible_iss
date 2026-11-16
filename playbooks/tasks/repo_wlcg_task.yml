@@ -1,22 +1,27 @@
 ---
 - name: Include pkg_yum-utils_task.yml
-  include_tasks: pkg_yum-utils_task.yml
+  ansible.builtin.include_tasks: pkg_yum-utils_task.yml
 
 - name: Import WLCG key
   ansible.builtin.rpm_key:
     state: present
-    key: http://linuxsoft.cern.ch/wlcg/RPM-GPG-KEY-wlcg
+    key: "http://linuxsoft.cern.ch/wlcg/RPM-GPG-KEY-wlcg{{ '-EL10' if ansible_facts['distribution_major_version'] == '10' else '' }}"
 
-- name: Install WLCG repository EL9
+# EL9 : wlcg-repo-1.0.0, DSA-1024 key RPM-GPG-KEY-wlcg
+# EL10: wlcg-repo-2.0.0, RSA-3072 key RPM-GPG-KEY-wlcg-EL10 (rpm on EL10 rejects the DSA key)
+- name: Install WLCG repository EL9/EL10
+  vars:
+    wlcg_el: "{{ ansible_facts['distribution_major_version'] }}"
+    wlcg_repo_version: "{{ '2.0.0' if ansible_facts['distribution_major_version'] == '10' else '1.0.0' }}"
   ansible.builtin.dnf:
-    name: http://linuxsoft.cern.ch/wlcg/el9/x86_64/wlcg-repo-1.0.0-1.el9.noarch.rpm
+    name: "http://linuxsoft.cern.ch/wlcg/el{{ wlcg_el }}/x86_64/wlcg-repo-{{ wlcg_repo_version }}-1.el{{ wlcg_el }}.noarch.rpm"
     state: present
-  when: ansible_facts[ 'distribution' ] == 'AlmaLinux'
+  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] in ['9', '10']
   tags: repo
 
 - name: Repo WLCG - exclude packages
   community.general.ini_file:
-    path: /etc/yum.repos.d/wlcg-el9.repo
+    path: "/etc/yum.repos.d/wlcg-el{{ ansible_facts['distribution_major_version'] }}.repo"
     section: wlcg
     option: exclude
     value: "*cvmfs*"
@@ -26,4 +31,3 @@
 # - name: Print output
 #   ansible.builtin.debug:
 #     msg: "{{ ansible_facts[ 'distribution' ] }}"
-
