@@ -1,8 +1,9 @@
 ---
-- name: Install dnsmasq Alma9
+- name: Install dnsmasq Alma9/Alma10
   ansible.builtin.dnf:
     name: dnsmasq
     state: present
-  when: ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] == '9' ) or ansible_facts['distribution'] == 'Fedora'
+  when: >-
+    ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10'] )
+    or ansible_facts['distribution'] == 'Fedora'
   tags: packages
-
