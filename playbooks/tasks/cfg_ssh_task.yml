@@ -3,13 +3,15 @@
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../additions/ssh/00-issgeneric.conf"
     dest: /etc/ssh/sshd_config.d/
-    mode: 0600
+    mode: "0600"
     owner: root
     group: root
     force: true
-  when: ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] == '9' ) or ansible_facts['distribution'] == 'Fedora'
+  when: >-
+    ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10'] )
+    or ansible_facts['distribution'] == 'Fedora'
 
-- name: restart sshd
+- name: Restart sshd
   ansible.builtin.systemd:
     name: sshd
     state: restarted
