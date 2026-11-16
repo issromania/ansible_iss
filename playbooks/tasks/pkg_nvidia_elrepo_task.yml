@@ -12,53 +12,51 @@
 #     This task does NOT install kernel-ml itself. Add that separately if needed.
 #   - Secure Boot is DISABLED. DKMS modules are unsigned.
 #   - Architecture: x86_64.
-#   - ansible_become: true set at play level, or adjust per-task as needed.
+#   - Runs as root; no become.
 
 # ---------------------------------------------------------------------------
 # Phase 1 — Repositories
 # ---------------------------------------------------------------------------
 
-- name: nvidia | Enable CRB repository
+- name: NVIDIA | Enable CRB repository
   ansible.builtin.command:
     cmd: dnf config-manager --set-enabled crb
   changed_when: false
-  become: true
 
-- name: nvidia | Install EPEL 9 release
+- name: NVIDIA | Install EPEL release
   ansible.builtin.dnf:
     name: epel-release
     state: present
-  become: true
 
-- name: nvidia | Import ELRepo GPG key
+- name: NVIDIA | Import ELRepo GPG key
   ansible.builtin.rpm_key:
-    key: https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+    key: "https://www.elrepo.org/RPM-GPG-KEY-{{ 'v2-' if ansible_facts['distribution_major_version'] | int >= 10 else '' }}elrepo.org"
     state: present
-  become: true
 
-- name: nvidia | Install ELRepo release package
+- name: NVIDIA | Install ELRepo release package
   ansible.builtin.dnf:
-    name: https://www.elrepo.org/elrepo-release-9.el9.elrepo.noarch.rpm
+    name: >-
+      https://www.elrepo.org/elrepo-release-{{
+      ansible_facts['distribution_major_version'] }}.el{{
+      ansible_facts['distribution_major_version'] }}.elrepo.noarch.rpm
     state: present
-  become: true
 
-- name: nvidia | Enable elrepo-kernel sub-repository
+- name: NVIDIA | Enable elrepo-kernel sub-repository
   ansible.builtin.command:
     cmd: dnf config-manager --set-enabled elrepo-kernel
   changed_when: false
-  become: true
 
-- name: nvidia | Add NVIDIA CUDA repository
+- name: NVIDIA | Add NVIDIA CUDA repository
   ansible.builtin.get_url:
-    url: https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
-    dest: /etc/yum.repos.d/cuda-rhel9.repo
+    url: >-
+      https://developer.download.nvidia.com/compute/cuda/repos/rhel{{
+      ansible_facts['distribution_major_version'] }}/x86_64/cuda-rhel{{
+      ansible_facts['distribution_major_version'] }}.repo
+    dest: "/etc/yum.repos.d/cuda-rhel{{ ansible_facts['distribution_major_version'] }}.repo"
     owner: root
     group: root
     mode: '0644'
-  become: true
 
-- name: nvidia | Refresh DNF cache after all repo changes
+- name: NVIDIA | Refresh DNF cache after all repo changes
   ansible.builtin.dnf:
     update_cache: true
-  become: true
-
