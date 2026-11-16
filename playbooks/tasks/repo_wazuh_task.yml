@@ -3,6 +3,7 @@
   ansible.builtin.rpm_key:
     key: https://packages.wazuh.com/key/GPG-KEY-WAZUH
     state: present
+  when: ansible_facts[ 'os_family' ] == "RedHat"
 
 - name: "[RPM] Deploy Wazuh YUM repository (disabled by default)"
   # Repo is deployed with enabled=0. The install task uses enablerepo: wazuh
@@ -24,7 +25,8 @@
       priority=1
 
 - name: "DEB Install prerequisites"
-  ansible.builtin.apt: [ 'gnupg', 'apt-transport-https']
+  ansible.builtin.apt:
+    name: ['gnupg', 'apt-transport-https']
     state: present
     update_cache: true
   when: ansible_facts[ 'os_family' ] == "Debian"
