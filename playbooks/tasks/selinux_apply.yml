@@ -1,25 +1,37 @@
 - name: Install tools
-  yum: pkg=policycoreutils-python
-       state=installed
+  ansible.builtin.dnf:
+    name: policycoreutils-python-utils
+    state: present
 
 - name: Remove SELinux policy package
-  command: semodule -r myapp
+  ansible.builtin.command: semodule -r myapp
+  register: selinux_myapp_removed
+  changed_when: selinux_myapp_removed.rc == 0
   failed_when: false
 
 - name: Copy SELinux type enforcement file
-  copy: src=myapp.te
-        dest=/tmp/
+  ansible.builtin.copy:
+    src: myapp.te
+    dest: /tmp/
+    mode: "0644"
 
 - name: Compile SELinux module file
-  command: checkmodule -M -m -o /tmp/myapp.mod /tmp/myapp.te
+  ansible.builtin.command: checkmodule -M -m -o /tmp/myapp.mod /tmp/myapp.te
+  changed_when: true
 
 - name: Build SELinux policy package
-  command: semodule_package -o /tmp/myapp.pp -m /tmp/myapp.mod
+  ansible.builtin.command: semodule_package -o /tmp/myapp.pp -m /tmp/myapp.mod
+  changed_when: true
 
 - name: Load SELinux policy package
-  command: semodule -i /tmp/myapp.pp
+  ansible.builtin.command: semodule -i /tmp/myapp.pp
+  changed_when: true
 
 - name: Remove temporary files
-  file: path=/tmp/myapp.*
-        state=absent
-
+  ansible.builtin.file:
+    path: "/tmp/myapp.{{ item }}"
+    state: absent
+  loop:
+    - te
+    - mod
+    - pp
