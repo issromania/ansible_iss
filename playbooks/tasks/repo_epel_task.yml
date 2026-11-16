@@ -1,7 +1,7 @@
 ---
-- name: Enable EPEL Repository on EL9
+- name: Enable EPEL Repository on EL9/EL10
   ansible.builtin.dnf:
     name: epel-release
     state: present
     update_cache: false
-  when: ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] == '9'
+  when: ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10']
