@@ -4,11 +4,14 @@
     state: present
     key: http://download.nordugrid.org/RPM-GPG-KEY-nordugrid-7
 
-- name: Install Nordugrid repository EL9
+- name: Install Nordugrid repository EL9/EL10
   ansible.builtin.dnf:
-    name: https://download.nordugrid.org/packages/nordugrid-release/releases/7/rocky/9/x86_64/nordugrid-release-7-1.el9.noarch.rpm
+    name: >-
+      https://download.nordugrid.org/packages/nordugrid-release/releases/7/rocky/{{
+      ansible_facts['distribution_major_version'] }}/x86_64/nordugrid-release-7-1.el{{
+      ansible_facts['distribution_major_version'] }}.noarch.rpm
     state: present
-  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] == '9'
+  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] in ['9', '10']
   tags: repo
 
 - name: Check existence of epel.repo
