@@ -1,25 +1,25 @@
 ---
-- name: include pkg_dnsmasq_task.yml
+- name: Include pkg_dnsmasq_task.yml
   ansible.builtin.include_tasks: pkg_dnsmasq_task.yml
 
 - name: Dnsmasq remotes 85
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../additions/dnsmasq/resolv_dnsmasq85.conf"
     dest: /etc/resolv_dnsmasq.conf
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     backup: true
     force: true
   register: dnsmasq_servers_is_configured
   when:
-    - ( ansible_all_ipv4_addresses | ansible.utils.reduce_on_network( '85.120.46.0/24' ) | length | int ) > 0
+    - ( ansible_facts['all_ipv4_addresses'] | ansible.utils.reduce_on_network( '85.120.46.0/24' ) | length | int ) > 0
 
 - name: Dnsmasq remotes 46
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../additions/dnsmasq/resolv_dnsmasq46.conf"
     dest: /etc/resolv_dnsmasq.conf
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     backup: true
@@ -27,13 +27,13 @@
   register: dnsmasq_servers_is_configured
   when:
     - dnsmasq_servers_is_configured is skipped
-    - ( ansible_all_ipv4_addresses | ansible.utils.reduce_on_network( '46.243.114.128/25' ) | length | int ) > 0
+    - ( ansible_facts['all_ipv4_addresses'] | ansible.utils.reduce_on_network( '46.243.114.128/25' ) | length | int ) > 0
 
 - name: Dnsmasq remotes 10
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../additions/dnsmasq/resolv_dnsmasq10.conf"
     dest: /etc/resolv_dnsmasq.conf
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     backup: true
@@ -41,13 +41,13 @@
   register: dnsmasq_servers_is_configured
   when:
     - dnsmasq_servers_is_configured is skipped
-    - ( ansible_all_ipv4_addresses | ansible.utils.reduce_on_network( '10.10.8.0/22' ) | length | int ) > 0
+    - ( ansible_facts['all_ipv4_addresses'] | ansible.utils.reduce_on_network( '10.10.8.0/22' ) | length | int ) > 0
 
 - name: Dnsmasq remotes 172
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../additions/dnsmasq/resolv_dnsmasq172.conf"
     dest: /etc/resolv_dnsmasq.conf
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     backup: true
@@ -55,13 +55,13 @@
   register: dnsmasq_servers_is_configured
   when:
     - dnsmasq_servers_is_configured is skipped
-    - ( ansible_all_ipv4_addresses | ansible.utils.reduce_on_network( '172.20.0.0/24' ) | length | int ) > 0
+    - ( ansible_facts['all_ipv4_addresses'] | ansible.utils.reduce_on_network( '172.20.0.0/24' ) | length | int ) > 0
 
 - name: Dnsmasq configuration
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../additions/dnsmasq/iss.conf"
     dest: /etc/dnsmasq.d/
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     backup: true
@@ -72,7 +72,7 @@
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../additions/dnsmasq/resolv.conf"
     dest: /etc/resolv.conf
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     backup: true
@@ -89,6 +89,5 @@
     value: none
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
     backup: true
-
