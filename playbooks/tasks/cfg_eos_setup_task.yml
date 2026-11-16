@@ -21,16 +21,16 @@
     group: root
     mode: '0644'
     force: true
-  ignore_errors: true
+  ignore_errors: true  # noqa: ignore-errors
 
-- name: mkdir EOS directories
+- name: Mkdir EOS directories
   ansible.builtin.file:
     owner: daemon
     group: daemon
     mode: 'u=rwX,g=rX,o=rX'
     recurse: false
     state: directory
-    path : "{{ eos_common_dirs }}"
+    path: "{{ eos_common_dirs }}"
   loop_control:
     loop_var: eos_common_dirs
   with_items:
@@ -79,7 +79,6 @@
     - /var/spool/eos
     - /var/log/eos
 
-#- name: "Dump ansible_facts"
+# - name: "Dump ansible_facts"
 #  debug:
 #    msg: "{{ ansible_facts | to_nice_json }}"
-
