@@ -8,11 +8,19 @@
       - jq
       - jc
       - ps_mem
-      - the_silver_searcher
     state: present
     update_cache: false
     enablerepo: "epel"
   when: ansible_facts[ 'distribution' ] == 'AlmaLinux'
+
+# Not packaged in EPEL 10.
+- name: Install the_silver_searcher - EL9
+  ansible.builtin.dnf:
+    name: the_silver_searcher
+    state: present
+    update_cache: false
+    enablerepo: "epel"
+  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] == '9'
 
 - name: Install misc tools for server admin - Fedora
   ansible.builtin.dnf:
