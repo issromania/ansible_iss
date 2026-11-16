@@ -54,3 +54,4 @@
   ansible.builtin.command:
     cmd: newaliases
   when: aliases_changed.changed
+  changed_when: true
