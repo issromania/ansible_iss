@@ -5,6 +5,7 @@
     owner: root
     group: root
     state: directory
+    mode: '0755'
   loop:
     - /root/tuning.d
     - /root/bin
@@ -32,6 +33,7 @@
     cmd: find /root/tuning.d -type f -delete
   args:
     chdir: /root/tuning.d
+  changed_when: true
 
 - name: Copy tuning scripts
   ansible.builtin.copy:
@@ -47,4 +49,4 @@
 
 - name: Apply tuning scripts
   ansible.builtin.command: /root/bin/apply_tuning
-
+  changed_when: true
