@@ -1,11 +1,14 @@
 ---
 - name: Bootstrap ansible python requirements
   ansible.builtin.raw: |-
+    set -e;
     source /etc/os-release;
-    [[ "${ID}" == "almalinux" ]] && { dnf install -y python3 python3-devel python3-setuptools python3-pip python3-wheel python3-virtualenv; /usr/bin/crb enable; }
-    [[ "${ID}" == "fedora" ]] && dnf install -y python3 python3-devel python3-setuptools python3-pip python3-wheel python3-virtualenv;
-    [[ "${ID}" == "ubuntu" ]] && apt install -y python3 python3-dev python3-setuptools python3-pip python3-wheel python3-virtualenv;
-    exit 0;
+    PKGS="python3 python3-setuptools python3-pip python3-wheel python3-virtualenv";
+    case "${ID}" in
+      almalinux) dnf install -y epel-release; /usr/bin/crb enable; dnf install -y ${PKGS} ;;
+      fedora) dnf install -y ${PKGS} ;;
+      ubuntu) apt install -y ${PKGS} ;;
+    esac
   tags: packages
   register: python_install_result
   changed_when: false
