@@ -6,7 +6,6 @@
   ansible.builtin.dnf:
     name:
       - cifs-utils.x86_64
-      - smbldap-tools
       - nbtscan.x86_64
       - adcli.x86_64
       - msktutil.x86_64
@@ -37,3 +36,13 @@
   when: ansible_facts['distribution'] == 'AlmaLinux' or ansible_facts['distribution'] == 'Fedora'
   tags: packages
 
+# Not packaged in EPEL 10.
+- name: Install smbldap-tools - EL9 or Fedora
+  ansible.builtin.dnf:
+    name: smbldap-tools
+    state: present
+    update_cache: false
+  when: >-
+    ( ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] == '9' )
+    or ansible_facts['distribution'] == 'Fedora'
+  tags: packages
