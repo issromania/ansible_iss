@@ -1,13 +1,14 @@
 ---
-- name: include repo_wlcg_task.yml
+- name: Include repo_wlcg_task.yml
   ansible.builtin.include_tasks: repo_wlcg_task.yml
 
 - name: Install mlsensor EL9
   ansible.builtin.dnf:
-    name: [ 'mlsensor' ]
+    name: ['mlsensor']
     state: present
     enablerepo: "epel,wlcg"
     disablerepo: "UMD*"
-  when: ( ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] == '9' ) or ansible_facts[ 'distribution' ] == 'Fedora'
+  when: >-
+    ( ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] == '9' )
+    or ansible_facts[ 'distribution' ] == 'Fedora'
   tags: packages
-
