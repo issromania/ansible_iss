@@ -1,5 +1,6 @@
 ---
-- include_tasks: repo_alibuild_task.yml
+- name: Include repo_alibuild_task.yml
+  ansible.builtin.include_tasks: repo_alibuild_task.yml
 
 - name: Install slurmd - EL9/Fedora
   ansible.builtin.dnf:
@@ -9,4 +10,3 @@
     state: present
     update_cache: false
   when: ansible_facts[ 'distribution' ] == 'AlmaLinux' or ansible_facts[ 'distribution' ] == 'Fedora'
-
