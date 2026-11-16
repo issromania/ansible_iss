@@ -3,3 +3,4 @@
   ansible.builtin.shell: for md in /sys/block/md*/md/sync_action; do echo idle > $md; done
   args:
     executable: /usr/bin/bash
+  changed_when: true
