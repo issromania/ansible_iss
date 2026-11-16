@@ -35,10 +35,9 @@
 
 - name: Restart ip6tables
   ansible.builtin.systemd:
-    name: iptables
+    name: ip6tables
     state: restarted
     enabled: true
 
 # !!!! BETTER ALWAYS RESTART IPTABLES
 #  when: _iptables_v6_update.changed
-
