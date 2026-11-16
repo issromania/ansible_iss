@@ -3,7 +3,7 @@
   ansible.builtin.yum_repository:
     name: epel-nvidia
     description: negativo17 - Nvidia
-    file: /etc/yum.repos.d/epel-nvidia.repo
+    file: epel-nvidia
     baseurl: https://negativo17.org/repos/nvidia/epel-$releasever/$basearch/
     gpgkey: https://negativo17.org/repos/RPM-GPG-KEY-slaanesh
     gpgcheck: true
@@ -13,15 +13,15 @@
     state: present
     owner: root
     group: root
-    mode: 0644
-  when: ansible_facts['ansible_distribution'] == 'AlmaLinux'
+    mode: "0644"
+  when: ansible_facts['distribution'] == 'AlmaLinux'
   tags: repo
 
 - name: Negativo fedora-nvidia
   ansible.builtin.yum_repository:
     name: fedora-nvidia
     description: negativo17 - Nvidia
-    file: /etc/yum.repos.d/fedora-nvidia.repo
+    file: fedora-nvidia
     baseurl: https://negativo17.org/repos/nvidia/fedora-$releasever/$basearch/
     gpgkey: https://negativo17.org/repos/RPM-GPG-KEY-slaanesh
     gpgcheck: true
@@ -31,7 +31,6 @@
     state: present
     owner: root
     group: root
-    mode: 0644
-  when: ansible_facts['ansible_distribution'] == 'Fedora'
+    mode: "0644"
+  when: ansible_facts['distribution'] == 'Fedora'
   tags: repo
-
