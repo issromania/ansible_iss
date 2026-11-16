@@ -7,9 +7,8 @@
 
 - name: Install vobox packages
   ansible.builtin.dnf:
-    name: [ 'wlcg-vobox' ]
+    name: ['wlcg-vobox']
     state: present
     enablerepo: "wlcg,UMD-5-release,UMD-5-contrib"
     exclude: "xrootd4-*"
   tags: packages
-
