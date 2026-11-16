@@ -4,6 +4,7 @@
     cmd: find /etc/sysctl.d -type f -delete
   args:
     chdir: /etc/sysctl.d
+  changed_when: true
 
 - name: Copy generic sysctl settings
   ansible.builtin.copy:
@@ -19,4 +20,4 @@
 
 - name: Re-apply sysctl parameters
   ansible.builtin.command: /usr/sbin/sysctl --system
-
+  changed_when: true
