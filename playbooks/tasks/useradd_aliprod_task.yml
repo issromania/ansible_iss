@@ -1,6 +1,6 @@
 ---
-- name: load aliprod hash var
-  include_vars: "{{ playbook_dir }}/../vault/aliprod_hash_pass.yml"
+- name: Load aliprod hash var
+  ansible.builtin.include_vars: "{{ playbook_dir }}/../vault/aliprod_hash_pass.yml"
 
 - name: Add aliprod user
   ansible.builtin.user:
@@ -11,7 +11,7 @@
     password: '{{ aliprod_hash }}'
     update_password: on_create
 
-- name: set limits for aliprod user
+- name: Set limits for aliprod user
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../additions/limits.d/99-aliprod_limits.conf"
     dest: /etc/security/limits.d/
