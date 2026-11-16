@@ -8,13 +8,13 @@
     state: present
     enablerepo: "remi, remi-modular"
 
-- name: Install php (latest stable) from remi - EL9
+- name: Install php (latest stable) from remi - EL9/EL10
   ansible.builtin.dnf:
     name: 'php-*'
     state: latest
     update_only: true
     enablerepo: "remi, remi-modular"
-  when: ( ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] == '9' )
+  when: ( ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] in ['9', '10'] )
   tags: packages
 
 - name: Install php (latest stable) from remi - Fedora
