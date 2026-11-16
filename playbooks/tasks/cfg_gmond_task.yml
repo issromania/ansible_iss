@@ -1,17 +1,18 @@
 ---
-- name: include pkg_gmond_task.yml
+- name: Include pkg_gmond_task.yml
   ansible.builtin.include_tasks: pkg_gmond_task.yml
 
 - name: Gmond customize systemd unit - create dir
   ansible.builtin.file:
     path: /etc/systemd/system/gmond.service.d/
     state: directory
+    mode: "0755"
 
 - name: Gmond customize systemd unit
   ansible.builtin.copy:
     dest: /etc/systemd/system/gmond.service.d/
     src: "{{ playbook_dir }}/../additions/gmond_conf/gmond.service.d/override.conf"
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     backup: false
@@ -20,4 +21,3 @@
 - name: Reload systemd
   ansible.builtin.systemd_service:
     daemon_reload: true
-
