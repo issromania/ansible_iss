@@ -5,8 +5,12 @@
     key: https://download.ceph.com/keys/release.asc
   tags: rpmkey
 
+# download.ceph.com publishes el10 packages only from Ceph 20 (tentacle) on.
 - name: Install CEPH repository
+  vars:
+    ceph_el: "{{ '10' if ansible_facts['distribution_major_version'] == '10' else '9' }}"
+    ceph_default_version: "{{ '20.2.5' if ansible_facts['distribution_major_version'] == '10' else '19.2.0' }}"
   ansible.builtin.dnf:
-    name: "https://download.ceph.com/rpm-{{ CEPH_VERSION | default('19.2.0') }}/el9/noarch/ceph-release-1-1.el9.noarch.rpm"
+    name: "https://download.ceph.com/rpm-{{ CEPH_VERSION | default(ceph_default_version) }}/el{{ ceph_el }}/noarch/ceph-release-1-1.el{{ ceph_el }}.noarch.rpm"
     state: present
   tags: repo
