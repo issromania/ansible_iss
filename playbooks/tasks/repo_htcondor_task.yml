@@ -9,7 +9,9 @@
 
 - name: Install HTCondor repository
   ansible.builtin.dnf:
-    name: "https://research.cs.wisc.edu/htcondor/repo/{{ htcondor_version }}/htcondor-release-current.el9.noarch.rpm"
+    name: >-
+      https://research.cs.wisc.edu/htcondor/repo/{{ htcondor_version
+      }}/htcondor-release-current.el{{ ansible_facts['distribution_major_version'] }}.noarch.rpm
     state: present
   when: ansible_facts['distribution'] == 'AlmaLinux'
   tags: repo
