@@ -32,7 +32,7 @@
 # Requires: wazuh_agent_group defined in inventory; 'sec.spacescience.ro'
 #           resolvable as an Ansible host for delegation.
 
-- name: wazuh group | Skip the Wazuh manager entirely
+- name: Wazuh group | Skip the Wazuh manager entirely
   # CRITICAL. The manager also has /var/ossec/etc/client.keys -- it holds the
   # key for EVERY agent, one per line. Without this guard the awk below would
   # read field 1 of the FIRST line, i.e. some unrelated agent's ID, and then
@@ -43,12 +43,12 @@
   ansible.builtin.meta: end_host
   when: inventory_hostname == 'sec.spacescience.ro'
 
-- name: wazuh group | Check whether a Wazuh agent is present
+- name: Wazuh group | Check whether a Wazuh agent is present
   ansible.builtin.stat:
     path: /var/ossec/etc/client.keys
   register: _client_keys
 
-- name: wazuh group | Read this agent's ID from client.keys
+- name: Wazuh group | Read this agent's ID from client.keys
   # Field 1 of client.keys is the agent ID as the manager knows it. Reading it
   # here avoids a name-to-ID lookup on the manager, which would break on any
   # host whose registered name differs from inventory_hostname.
@@ -63,7 +63,7 @@
   check_mode: false
   when: _client_keys.stat.exists
 
-- name: wazuh group | Report hosts that are not enrolled
+- name: Wazuh group | Report hosts that are not enrolled
   # Empty client.keys means the package is installed but enrollment never
   # completed. The agent shows as never-connected on the manager.
   ansible.builtin.debug:
@@ -73,7 +73,7 @@
           else 'client.keys empty' }}). Group cannot be set.
   when: not _client_keys.stat.exists or _agent_id.stdout | default('') | length == 0
 
-- name: wazuh group | Read the agent's current group membership
+- name: Wazuh group | Read the agent's current group membership
   # failed_when: false is REQUIRED. agent_groups -s exits non-zero with
   # "Internal error: list index out of range" when the agent's group array in
   # global.db is empty -- observed on ceph3 (agent 089) 2026-08-27. That is
@@ -91,7 +91,7 @@
     - _agent_id.stdout | default('') | length > 0
     - wazuh_agent_group is defined
 
-- name: wazuh group | Decide whether the membership needs correcting
+- name: Wazuh group | Decide whether the membership needs correcting
   # Two triggers:
   #   rc != 0        -> groupless / corrupt global.db row
   #   regex miss     -> wrong group, or extra groups alongside the right one
@@ -105,7 +105,7 @@
              is not search('belongs to groups: ' ~ wazuh_agent_group ~ '\.')) }}
   when: _grp_current is not skipped
 
-- name: wazuh group | Set the inventory group on the manager
+- name: Wazuh group | Set the inventory group on the manager
   # -a  add agent to group    -f  force single group    -q  no confirmation
   ansible.builtin.command:
     cmd: >-
@@ -116,10 +116,9 @@
   changed_when: true
   when: _grp_needs_fix | default(false) | bool
 
-- name: wazuh group | Report the correction
+- name: Wazuh group | Report the correction
   ansible.builtin.debug:
     msg: >-
       {{ inventory_hostname }} (ID {{ _agent_id.stdout }}) -> '{{ wazuh_agent_group }}'
       (was: {{ _grp_current.stdout | default('unreadable') | trim }})
   when: _grp_set is changed
-
