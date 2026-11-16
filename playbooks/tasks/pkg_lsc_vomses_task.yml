@@ -1,18 +1,27 @@
 ---
-- name: include repo_wlcg_task.yml
+- name: Include repo_wlcg_task.yml
   ansible.builtin.include_tasks: repo_wlcg_task.yml
 
-- name: lsc+vomses EL9
+- name: Lsc+vomses EL9/EL10
   ansible.builtin.dnf:
     name:
       - wlcg-iam-lsc-ops
       - wlcg-iam-vomses-ops
-      - wlcg-voms-ops
       - wlcg-iam-lsc-dteam
       - wlcg-iam-vomses-dteam
-      - wlcg-voms-dteam
       - wlcg-iam-lsc-alice
       - wlcg-iam-vomses-alice
+    state: latest
+    enablerepo: "wlcg"
+  when: ansible_facts['distribution'] == 'AlmaLinux' and ansible_facts['distribution_major_version'] in ['9', '10']
+  tags: packages
+
+# The wlcg-voms-* packages are not published in the WLCG el10 repository.
+- name: Lsc+vomses (wlcg-voms-*) EL9
+  ansible.builtin.dnf:
+    name:
+      - wlcg-voms-ops
+      - wlcg-voms-dteam
       - wlcg-voms-alice
     state: latest
     enablerepo: "wlcg"
