@@ -3,11 +3,13 @@
   ansible.builtin.file:
     path: /var/lib/systemd/linger/
     state: directory
+    mode: "0755"
 
 - name: Create systemd user@.service.d override directory
   ansible.builtin.file:
     path: /etc/systemd/system/user@.service.d/
     state: directory
+    mode: "0755"
 
 - name: Enable linger for this list of users
   ansible.builtin.copy:
@@ -16,7 +18,7 @@
     force: false
     group: root
     owner: root
-    mode: 0644
+    mode: "0644"
   loop_control:
     loop_var: _linger_user
   loop: "{{ _linger_users_list }}"
@@ -28,12 +30,11 @@
     force: true
     group: root
     owner: root
-    mode: 0644
+    mode: "0644"
     content: |
       [Service]
       Delegate=cpu cpuset io memory pids
 
-- name: systemd daemon-reload
+- name: Systemd daemon-reload
   ansible.builtin.systemd:
-    daemon_reload: yes
-
+    daemon_reload: true
