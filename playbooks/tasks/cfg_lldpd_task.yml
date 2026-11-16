@@ -1,10 +1,11 @@
 ---
-- include_tasks: pkg_lldpd_task.yml
+- name: Include pkg_lldpd_task.yml
+  ansible.builtin.include_tasks: pkg_lldpd_task.yml
 
 - name: Ansible create file with content example
   ansible.builtin.copy:
     dest: "/etc/lldpd.d/lldpd.conf"
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     force: true
@@ -17,4 +18,3 @@
     name: lldpd
     state: restarted
     enabled: true
-
