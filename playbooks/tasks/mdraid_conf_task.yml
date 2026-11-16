@@ -12,7 +12,10 @@
   ansible.builtin.file:
     path: /etc/systemd/system/raid-check.timer.d/
     state: directory
-  when: ( ansible_facts['distribution'] == 'AlmaLinux' and ( ansible_facts['distribution_major_version'] | int  > 7 ) ) or ansible_facts['distribution'] == 'Fedora'
+    mode: '0755'
+  when: >-
+    ( ansible_facts['distribution'] == 'AlmaLinux' and ( ansible_facts['distribution_major_version'] | int > 7 ) )
+    or ansible_facts['distribution'] == 'Fedora'
 
 - name: Raid-check timing (systemd) - EL9
   ansible.builtin.template:
@@ -22,7 +25,9 @@
     group: root
     mode: '0644'
     force: true
-  when: ( ansible_facts['distribution'] == 'AlmaLinux' and ( ansible_facts['distribution_major_version'] | int  > 7 ) ) or ansible_facts['distribution'] == 'Fedora'
+  when: >-
+    ( ansible_facts['distribution'] == 'AlmaLinux' and ( ansible_facts['distribution_major_version'] | int > 7 ) )
+    or ansible_facts['distribution'] == 'Fedora'
 
 - name: Raid-check timing (systemd) - start timer
   ansible.builtin.systemd:
@@ -30,4 +35,6 @@
     state: started
     daemon_reload: true
     enabled: true
-  when: ( ansible_facts['distribution'] == 'AlmaLinux' and ( ansible_facts['distribution_major_version'] | int  > 7 ) ) or ansible_facts['distribution'] == 'Fedora'
+  when: >-
+    ( ansible_facts['distribution'] == 'AlmaLinux' and ( ansible_facts['distribution_major_version'] | int > 7 ) )
+    or ansible_facts['distribution'] == 'Fedora'
