@@ -11,6 +11,7 @@
 - name: Create GRUB loadentry config
   ansible.builtin.copy:
     dest: "/boot/loader/entries/memtest.conf"
+    mode: "0644"
     content: |
         title  Memtest86+
         efi    /BOOT/memtest64.efi dark
