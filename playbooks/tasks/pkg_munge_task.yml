@@ -1,5 +1,5 @@
 ---
-- name: include repo_epel_task.yml
+- name: Include repo_epel_task.yml
   ansible.builtin.include_tasks: repo_epel_task.yml
 
 - name: Install munge - EL9
@@ -11,4 +11,3 @@
     enablerepo: "epel"
   when: ansible_facts[ 'distribution' ] == 'AlmaLinux' or ansible_facts[ 'distribution' ] == 'Fedora'
   tags: packages
-
