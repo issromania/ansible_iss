@@ -73,7 +73,8 @@
 # literal filename error_log in the debug output and always false-positives.
 - name: Verify deployed configuration parses cleanly
   ansible.builtin.shell:
-    cmd: "logrotate -d /etc/logrotate.d/httpd 2>&1 | grep '^error:' || true"
+    cmd: "set -o pipefail; logrotate -d /etc/logrotate.d/httpd 2>&1 | grep '^error:' || true"
+    executable: /bin/bash
   changed_when: false
   register: logrotate_check
   when: logrotate_deployed is changed
@@ -124,4 +125,3 @@
       logrotate manually.
   when:
     - ansible_facts['os_family'] == 'Debian'
-
