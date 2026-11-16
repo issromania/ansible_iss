@@ -1,0 +1,38 @@
+---
+# Report the running kernel release and uptime of each host,
+# as a single table sorted by hostname.
+# Read-only: no changes are made on targets.
+- name: Report running kernel and uptime
+  hosts: all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - '!min'
+    - platform
+  tasks:
+    - name: Read /proc/uptime
+      ansible.builtin.slurp:
+        src: /proc/uptime
+      register: proc_uptime
+      when: ansible_facts['system'] == 'Linux'
+
+    - name: Store uptime in seconds
+      ansible.builtin.set_fact:
+        uptime_s: "{{ (proc_uptime['content'] | b64decode).split()[0] | float | int }}"
+      when: proc_uptime is not skipped
+
+    - name: Kernel and uptime table, sorted by hostname
+      run_once: true
+      vars:
+        hw: "{{ ansible_play_hosts | map('length') | max }}"
+        kw: "{{ ansible_play_hosts | map('extract', hostvars, ['ansible_facts', 'kernel']) | map('length') | max }}"
+        table: |-
+          {{ '%-*s  %-*s  %s' | format(hw | int, 'HOST', kw | int, 'KERNEL', 'UPTIME') }}
+          {% for h in ansible_play_hosts | sort %}
+          {% set s = hostvars[h]['uptime_s'] | default(-1) | int %}
+          {{ '%-*s  %-*s  %s' | format(hw | int, h, kw | int, hostvars[h]['ansible_facts']['kernel'],
+               ('%4dd %02dh %02dm' | format(s // 86400, (s % 86400) // 3600, (s % 3600) // 60)) if s >= 0 else '-') }}
+          {% endfor %}
+      ansible.builtin.debug:
+        msg: "{{ table.splitlines() }}"
+
