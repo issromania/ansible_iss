@@ -3,7 +3,7 @@
   ansible.builtin.raw: |-
     set -e;
     source /etc/os-release;
-    PKGS="python3 python3-setuptools python3-pip python3-wheel python3-virtualenv";
+    PKGS="python3 python3-setuptools python3-pip python3-wheel python3-virtualenv jq";
     case "${ID}" in
       almalinux) dnf install -y epel-release; /usr/bin/crb enable; dnf install -y ${PKGS} ;;
       fedora) dnf install -y ${PKGS} ;;

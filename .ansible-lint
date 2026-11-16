@@ -5,3 +5,4 @@ skip_list:
   - empty-lines
   - line-length
   - no-handler
+  - yaml[comments]

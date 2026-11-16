@@ -119,18 +119,6 @@
         pathmunge $HOME/.local/bin
   when: ansible_facts['distribution'] == 'AlmaLinux' or ansible_facts['distribution'] == 'Fedora'
 
-#- name: Set TZ default value
-#  ansible.builtin.copy:
-#    dest: /etc/profile.d/set_tz.sh
-#    mode: "0644"
-#    owner: root
-#    group: root
-#    backup: false
-#    force: true
-#    content: |
-#        TZ=':/etc/localtime'
-#        export TZ
-
 - name: Install hardware management and monitoring tools - EL9
   ansible.builtin.dnf:
     name:
@@ -160,3 +148,14 @@
   when: ansible_facts['virtualization_role'] != 'guest' and ansible_facts['distribution'] == 'Ubuntu'
   tags: packages
 
+#- name: Set TZ default value
+#  ansible.builtin.copy:
+#    dest: /etc/profile.d/set_tz.sh
+#    mode: "0644"
+#    owner: root
+#    group: root
+#    backup: false
+#    force: true
+#    content: |
+#        TZ=':/etc/localtime'
+#        export TZ
