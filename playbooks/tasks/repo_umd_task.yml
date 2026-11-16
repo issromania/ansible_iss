@@ -21,4 +21,3 @@
     value: "*nordugrid-*,eos-*,htcondor-*,*cvmfs-*,xrootd-*,*gfal2*,davix*,srm*,globus-*"
     create: false
     no_extra_spaces: true
-
