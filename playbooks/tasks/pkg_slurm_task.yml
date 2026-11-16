@@ -14,7 +14,7 @@
     update_cache: false
   when: ansible_facts[ 'distribution' ] == 'AlmaLinux' or ansible_facts[ 'distribution' ] == 'Fedora'
 
-##- name: Start and enable slurmd
+## - name: Start and enable slurmd
 ##  ansible.builtin.systemd:
 ##    name: slurmd
 ##    enabled: true
