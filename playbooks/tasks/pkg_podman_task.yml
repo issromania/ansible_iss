@@ -1,7 +1,17 @@
 ---
-- name: Install podman EL9
+- name: Install podman EL9/EL10
   ansible.builtin.dnf:
-    name: ['podman.x86_64', 'podman-plugins.x86_64']
+    name: ['podman.x86_64']
+    state: present
+    enablerepo: "epel"
+    disablerepo: "UMD*"
+  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] in ['9', '10']
+  tags: packages
+
+# podman-plugins (CNI/dnsname) does not exist in EL10, where netavark is the only network backend.
+- name: Install podman-plugins EL9
+  ansible.builtin.dnf:
+    name: ['podman-plugins.x86_64']
     state: present
     enablerepo: "epel"
     disablerepo: "UMD*"
