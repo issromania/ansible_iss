@@ -8,8 +8,8 @@
     loop_var: _timer_disable
   loop:
     - "dnf-makecache.timer"
-    - "mlocate-updatedb.timer"
-  ignore_errors: true
+    - "{{ 'plocate' if ansible_facts['distribution_major_version'] | int >= 10 else 'mlocate' }}-updatedb.timer"
+  ignore_errors: true  # noqa: ignore-errors
 
 - name: Create system directories
   ansible.builtin.file:
@@ -35,4 +35,3 @@
     src: /data/scratch
     dest: /scratch
     state: link
-
