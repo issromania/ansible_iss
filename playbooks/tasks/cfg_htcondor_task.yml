@@ -1,5 +1,3 @@
 ---
-- name: include htcondor installation
+- name: Include htcondor installation
   ansible.builtin.include_tasks: pkg_htcondor_task.yml
-
-
