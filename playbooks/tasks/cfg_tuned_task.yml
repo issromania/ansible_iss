@@ -5,7 +5,7 @@
 - name: Add ISS tuning profile
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../additions/tuned/iss"
-    dest: /etc/tuned/
+    dest: "{{ '/etc/tuned/profiles/' if ansible_facts['distribution_major_version'] | int >= 10 else '/etc/tuned/' }}"
     owner: root
     group: root
     mode: '0644'
