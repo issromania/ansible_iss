@@ -1,7 +1,6 @@
 ---
 - name: Include cfg_gmond_template.yml
-  include_tasks: cfg_gmond_template.yml
+  ansible.builtin.include_tasks: cfg_gmond_template.yml
   vars:
     _gmond_cluster_name: "ISS-ALICE"
     _gmond_udp_send_host: "85.120.46.17"
-
