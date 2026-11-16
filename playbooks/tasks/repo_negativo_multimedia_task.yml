@@ -3,7 +3,7 @@
   ansible.builtin.yum_repository:
     name: epel-multimedia
     description: negativo17 - Multimedia
-    file: /etc/yum.repos.d/epel-multimedia.repo
+    file: epel-multimedia
     baseurl: https://negativo17.org/repos/multimedia/epel-$releasever/$basearch/
     gpgkey: https://negativo17.org/repos/RPM-GPG-KEY-slaanesh
     gpgcheck: true
@@ -13,20 +13,20 @@
     state: present
     owner: root
     group: root
-    mode: 0644
-  when: ansible_facts['ansible_distribution'] == 'AlmaLinux'
+    mode: "0644"
+  when: ansible_facts['distribution'] == 'AlmaLinux'
   tags: repo
 
-#enabled_metadata=1
-#type=rpm-md
-#repo_gpgcheck=0
-#skip_if_unavailable=1
+# enabled_metadata=1
+# type=rpm-md
+# repo_gpgcheck=0
+# skip_if_unavailable=1
 
 - name: Negativo fedora-multimedia
   ansible.builtin.yum_repository:
     name: fedora-multimedia
     description: negativo17 - Multimedia
-    file: /etc/yum.repos.d/fedora-multimedia.repo
+    file: fedora-multimedia
     baseurl: https://negativo17.org/repos/multimedia/fedora-$releasever/$basearch/
     gpgkey: https://negativo17.org/repos/RPM-GPG-KEY-slaanesh
     gpgcheck: true
@@ -36,15 +36,15 @@
     state: present
     owner: root
     group: root
-    mode: 0644
-  when: ansible_facts['ansible_distribution'] == 'Fedora'
+    mode: "0644"
+  when: ansible_facts['distribution'] == 'Fedora'
   tags: repo
 
 - name: Negativo fedora-multimedia source
   ansible.builtin.yum_repository:
     name: fedora-multimedia-source
     description: negativo17 - Multimedia - Source
-    file: /etc/yum.repos.d/fedora-multimedia.repo
+    file: fedora-multimedia
     baseurl: https://negativo17.org/repos/nvidia/fedora-$releasever/SRPMS
     gpgkey: https://negativo17.org/repos/RPM-GPG-KEY-slaanesh
     gpgcheck: true
@@ -54,7 +54,6 @@
     state: present
     owner: root
     group: root
-    mode: 0644
-  when: ansible_facts['ansible_distribution'] == 'Fedora'
+    mode: "0644"
+  when: ansible_facts['distribution'] == 'Fedora'
   tags: repo
-
