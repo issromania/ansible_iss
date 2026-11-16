@@ -39,13 +39,13 @@
 
 - name: CUDA | Verify NVIDIA CUDA repository is configured
   ansible.builtin.stat:
-    path: /etc/yum.repos.d/cuda-rhel9.repo
+    path: "/etc/yum.repos.d/cuda-rhel{{ ansible_facts['distribution_major_version'] }}.repo"
   register: cuda_repo_stat
 
 - name: CUDA | Fail if CUDA repo is not present
   ansible.builtin.fail:
     msg: >
-      /etc/yum.repos.d/cuda-rhel9.repo not found.
+      /etc/yum.repos.d/cuda-rhel{{ ansible_facts['distribution_major_version'] }}.repo not found.
       The CUDA repository must be configured before running this task.
       Run nvidia_driver_elrepo.yml first.
   when: not cuda_repo_stat.stat.exists
@@ -53,7 +53,6 @@
 - name: CUDA | Refresh DNF cache
   ansible.builtin.dnf:
     update_cache: true
-  become: true
 
 # ---------------------------------------------------------------------------
 # Phase 2 — System build tools
@@ -69,7 +68,6 @@
       - pkg-config
       - zlib
     state: present
-  become: true
   # gcc/g++ are required by nvcc as the host compiler.
   # cmake is the standard build system for most CUDA projects.
   # zlib is an explicit prerequisite for cuDNN per official NVIDIA docs.
@@ -106,11 +104,13 @@
 
 - name: CUDA | Register version of CUDA toolkit - list format
   ansible.builtin.set_fact:
-    cuda_toolkit_version_list: "{{ cuda_toolkit_version_dnf.results | selectattr('yumstate','equalto','installed') | map(attribute='version') | list | first | split ('.') }}"
+    cuda_toolkit_version_list: >-
+      {{ cuda_toolkit_version_dnf.results | selectattr('yumstate', 'equalto', 'installed')
+         | map(attribute='version') | list | first | split('.') }}
 
 - name: CUDA | Register facts version of CUDA toolkit
   ansible.builtin.set_fact:
-    cuda_toolkit_version: "{{ cuda_toolkit_version_list[0:2] | join('-')  }}"
+    cuda_toolkit_version: "{{ cuda_toolkit_version_list[0:2] | join('-') }}"
     cuda_toolkit_version_maj: "{{ cuda_toolkit_version_list[0] }}"
 
 - name: CUDA | Install CUDA tools
@@ -129,8 +129,6 @@
       - cublasmp0.x86_64
       - libcublas-{{ cuda_toolkit_version }}.x86_64
       - libcublas-devel-{{ cuda_toolkit_version }}.x86_64
-      - cufftmp.x86_64
-      - cufftmp0.x86_64
       - libcufft-{{ cuda_toolkit_version }}.x86_64
       - libcufft-devel-{{ cuda_toolkit_version }}.x86_64
       - libcurand-{{ cuda_toolkit_version }}.x86_64
@@ -142,15 +140,23 @@
       - libcusolvermp0-cuda-{{ cuda_toolkit_version_maj }}.x86_64
       - libcusolvermp0-devel-cuda-{{ cuda_toolkit_version_maj }}.x86_64
       - cusparselt.x86_64
-      - libcusparselt-devel.x86_64
       - cusparselt0.x86_64
-      - libcusparselt0.x86_64
       - libcusparse-{{ cuda_toolkit_version }}.x86_64
       - libcusparse-devel-{{ cuda_toolkit_version }}.x86_64
       - libcusparselt0-cuda-{{ cuda_toolkit_version_maj }}.x86_64
       - libcusparselt0-devel-cuda-{{ cuda_toolkit_version_maj }}.x86_64
     state: present
-  become: true
+
+# Not published in the rhel10 CUDA repository (checked 2026-11-16).
+- name: CUDA | Install CUDA math libraries available on EL9 only
+  ansible.builtin.dnf:
+    name:
+      - cufftmp.x86_64
+      - cufftmp0.x86_64
+      - libcusparselt-devel.x86_64
+      - libcusparselt0.x86_64
+    state: present
+  when: ansible_facts['distribution_major_version'] | int < 10
 
 # ---------------------------------------------------------------------------
 # Phase 5 — Deep learning stack
@@ -185,7 +191,6 @@
       - libcudnn9-jit-devel-cuda-{{ cuda_toolkit_version_maj }}.x86_64
     state: present
     allowerasing: true
-  become: true
   # allowerasing=true mirrors the --allowerasing flag in NVIDIA's official
   # RHEL install docs. Required when any older cuDNN variant is already present.
 
@@ -195,7 +200,6 @@
       - libnccl
       - libnccl-devel
     state: present
-  become: true
 
 - name: CUDA | Install TensorRT inference engine and development headers
   ansible.builtin.dnf:
@@ -215,7 +219,6 @@
       - python3-libnvinfer-lean.x86_64
       - libnvonnxparsers-devel.x86_64
     state: present
-  become: true
 
 # ---------------------------------------------------------------------------
 # Phase 6 — Profiling, debugging, and developer tools
@@ -262,6 +265,7 @@
   ansible.builtin.command:
     cmd: ldconfig
   when: cuda_ldconf_written.changed
+  changed_when: true
 
 # ---------------------------------------------------------------------------
 # Phase 9 — Verification
