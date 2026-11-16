@@ -1,12 +1,11 @@
 ---
-- name: include repo_chrome_task.yml
+- name: Include repo_chrome_task.yml
   ansible.builtin.include_tasks: repo_chrome_task.yml
 
 - name: Install GOOGLE Chrome
-  ansible.builtin.yum:
-    name: [ 'google-chrome-stable.x86_64' ]
+  ansible.builtin.dnf:
+    name: ['google-chrome-stable.x86_64']
     state: present
     enablerepo: "cernvm,cernvm-config"
     disablerepo: "UMD*"
   tags: packages
-
