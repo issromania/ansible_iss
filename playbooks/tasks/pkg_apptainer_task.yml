@@ -1,16 +1,16 @@
 ---
-- name: Install apptainer EL9
+- name: Install apptainer EL9/EL10
   ansible.builtin.dnf:
-    name: [ 'apptainer', 'apptainer-suid' ]
+    name: ['apptainer', 'apptainer-suid']
     state: present
     enablerepo: "epel"
     disablerepo: "UMD*"
-  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] == '9'
+  when: ansible_facts[ 'distribution' ] == 'AlmaLinux' and ansible_facts[ 'distribution_major_version' ] in ['9', '10']
   tags: packages
 
 - name: Install apptainer Fedora
   ansible.builtin.dnf:
-    name: [ 'apptainer', 'apptainer-suid' ]
+    name: ['apptainer', 'apptainer-suid']
     state: present
   when: ansible_facts[ 'distribution' ] == 'Fedora'
   tags: packages
