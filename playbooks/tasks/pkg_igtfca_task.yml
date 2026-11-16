@@ -1,5 +1,6 @@
 ---
-- ansible.builtin.import_tasks: repo_egi_igtf_task.yml
+- name: Import repo_egi_igtf_task.yml
+  ansible.builtin.import_tasks: repo_egi_igtf_task.yml
 
 - name: Install certificates on newer distros EL9 or Fedora
   ansible.builtin.dnf:
