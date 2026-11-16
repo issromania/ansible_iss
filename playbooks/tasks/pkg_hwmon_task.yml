@@ -4,8 +4,7 @@
 
 - name: Install hardware monitoring tools on hardware machines (not vms) - EL9 and Fedora
   ansible.builtin.dnf:
-    name: [ 'rasdaemon.x86_64', 'edac-utils', 'linux-firmware', 'mdadm' ]
+    name: ['rasdaemon.x86_64', 'edac-utils', 'linux-firmware', 'mdadm']
     state: present
     update_cache: false
   when: ansible_facts[ 'distribution' ] == 'AlmaLinux' or ansible_facts[ 'distribution' ] == 'Fedora'
-
