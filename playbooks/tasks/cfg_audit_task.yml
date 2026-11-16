@@ -26,13 +26,13 @@
 # inline on the inventory host line (system python3 is 3.8, below the
 # ansible-core minimum of 3.9).
 
-- name: audit | Install the audit package (RedHat family)
+- name: Audit | Install the audit package (RedHat family)
   ansible.builtin.package:
     name: audit
     state: present
   when: ansible_facts['os_family'] == 'RedHat'
 
-- name: audit | Check whether auditd is installed (Debian family)
+- name: Audit | Check whether auditd is installed (Debian family)
   ansible.builtin.command:
     cmd: dpkg-query -W -f=${Status} auditd
   register: _deb_auditd
@@ -40,7 +40,7 @@
   failed_when: false
   when: ansible_facts['os_family'] == 'Debian'
 
-- name: audit | Refresh apt cache before install (Debian family)
+- name: Audit | Refresh apt cache before install (Debian family)  # noqa: command-instead-of-module
   ansible.builtin.command:
     cmd: apt-get update -qq
   environment:
@@ -50,7 +50,7 @@
     - "'install ok installed' not in _deb_auditd.stdout | default('')"
   changed_when: false
 
-- name: audit | Install the audit package (Debian family)
+- name: Audit | Install the audit package (Debian family)  # noqa: command-instead-of-module
   # apt-get via command, NOT ansible.builtin.package. The package module
   # delegates to the apt module, which requires python3-apt on the target.
   # python3-apt ships a compiled extension bound to the distribution's DEFAULT
@@ -65,8 +65,9 @@
   when:
     - ansible_facts['os_family'] == 'Debian'
     - "'install ok installed' not in _deb_auditd.stdout | default('')"
+  changed_when: true
 
-- name: audit | Ensure auditd is enabled and running
+- name: Audit | Ensure auditd is enabled and running
   # auditd.service carries RefuseManualStop=yes on EL. Rules are loaded with
   # augenrules below; never use state: restarted here.
   ansible.builtin.service:
@@ -74,7 +75,7 @@
     state: started
     enabled: true
 
-- name: audit | Deploy breach-detection audit rules
+- name: Audit | Deploy breach-detection audit rules
   ansible.builtin.copy:
     dest: /etc/audit/rules.d/zz-iss-detect.rules
     owner: root
@@ -109,7 +110,11 @@
       ## every agent enrollment, so the watch would fire once per enrolling
       ## agent. On an agent it changes once, at enrollment.
       -w /var/ossec/etc/ossec.conf    -p wa -k iss-evasion
-      {{ '-w /var/ossec/etc/client.keys   -p wa -k iss-evasion' if inventory_hostname != 'sec.spacescience.ro' else '## client.keys watch omitted: this host is the Wazuh manager.' }}
+      {% if inventory_hostname != 'sec.spacescience.ro' %}
+      -w /var/ossec/etc/client.keys   -p wa -k iss-evasion
+      {% else %}
+      ## client.keys watch omitted: this host is the Wazuh manager.
+      {% endif %}
 
       ## NOT WATCHED, and this is deliberate:
       ##   -w /usr/sbin/auditctl   -p x
@@ -209,7 +214,7 @@
       ##   -a never,exit -F arch=b64 -F dir=/tmp -F perm=x -F auid=989
   register: _audit_rules
 
-- name: audit | Detect ARC-CE BDII provider directory
+- name: Audit | Detect ARC-CE BDII provider directory
   # auditctl REJECTS a -F dir= rule when the directory does not exist, so the
   # exclusion below must not be deployed fleet-wide. Gating on the path makes
   # the rule self-scoping: no inventory variable, no group membership needed.
@@ -217,7 +222,7 @@
     path: /var/tmp/arc
   register: _arc_dir
 
-- name: audit | Deploy iss-tmpexec exclusions where ARC-CE is present
+- name: Audit | Deploy iss-tmpexec exclusions where ARC-CE is present
   # Measured 2026-08-27 on grid05 and alien: ARC-CE (nordugrid) runs its BDII
   # information providers as perl scripts out of /var/tmp/arc/bdii/provider/,
   # under uid 55 (ldap, the OpenLDAP server account -- BDII is LDAP-based)
@@ -244,7 +249,7 @@
   when: _arc_dir.stat.exists
   register: _audit_exclusions
 
-- name: audit | Remove stale exclusions where ARC-CE is absent
+- name: Audit | Remove stale exclusions where ARC-CE is absent
   # If ARC-CE is uninstalled, a leftover -F dir= rule for a nonexistent path
   # makes augenrules --load fail for the whole ruleset.
   ansible.builtin.file:
@@ -253,7 +258,7 @@
   when: not _arc_dir.stat.exists
   register: _audit_exclusions_removed
 
-- name: audit | Load the rules into the kernel
+- name: Audit | Load the rules into the kernel
   ansible.builtin.command:
     cmd: augenrules --load
   when: _audit_rules is changed
@@ -261,13 +266,13 @@
         or _audit_exclusions_removed is changed
   changed_when: true
 
-- name: audit | Read the kernel ruleset before verification
+- name: Audit | Read the kernel ruleset before verification
   ansible.builtin.command:
     cmd: auditctl -l
   register: _audit_pre
   changed_when: false
 
-- name: audit | Force-load the merged ruleset if the kernel is short
+- name: Audit | Force-load the merged ruleset if the kernel is short
   # augenrules --load compares its merged output against /etc/audit/audit.rules
   # and prints "No change" WITHOUT loading when they are identical. If the
   # kernel ruleset was flushed -- auditd restart, auditctl -D, a package
@@ -281,13 +286,13 @@
   when: _audit_pre.stdout | regex_findall('iss-') | length < 35
   changed_when: true
 
-- name: audit | Re-read the kernel ruleset
+- name: Audit | Re-read the kernel ruleset
   ansible.builtin.command:
     cmd: auditctl -l
   register: _audit_loaded
   changed_when: false
 
-- name: audit | Assert every rule category loaded into the kernel
+- name: Audit | Assert every rule category loaded into the kernel
   # Counts rules AND checks each category. The previous form -- a substring
   # test for 'iss-evasion' alone -- passed on a host with only 4 of 36 rules
   # loaded, because augenrules reports per-rule rejections on stderr and
@@ -312,19 +317,19 @@
       'auditctl -R /etc/audit/audit.rules' by hand to see per-rule
       rejections, which augenrules swallows.
 
-- name: audit | Read kernel audit backlog and loss counters
+- name: Audit | Read kernel audit backlog and loss counters
   ansible.builtin.command:
     cmd: auditctl -s
   register: _audit_status
   changed_when: false
 
-- name: audit | Report audit status
+- name: Audit | Report audit status
   # lost= must be 0. Non-zero means the kernel dropped records and the
   # trail has holes -- raise -b, do not remove rules.
   ansible.builtin.debug:
     msg: "{{ inventory_hostname }}: {{ _audit_status.stdout }}"
 
-- name: audit | Check whether a Wazuh agent is installed at all
+- name: Audit | Check whether a Wazuh agent is installed at all
   # Measured on the fleet 2026-08-26: 30 of 97 hosts have no agent. Without
   # this gate the blockinfile below fails on every one of them, because
   # grep returns rc=2 (no such file) and "" | int evaluates to 0.
@@ -332,7 +337,7 @@
     path: /var/ossec/etc/ossec.conf
   register: _ossec_conf
 
-- name: audit | Report hosts with no Wazuh agent
+- name: Audit | Report hosts with no Wazuh agent
   # An audit trail that never leaves the host is deletable by the same root
   # account the rules are meant to watch. Not evidentiary under NIS2.
   ansible.builtin.debug:
@@ -341,7 +346,7 @@
       records stay local. Install the agent before relying on this host.
   when: not _ossec_conf.stat.exists
 
-- name: audit | Check whether the Wazuh agent is collecting audit.log
+- name: Audit | Check whether the Wazuh agent is collecting audit.log
   # audit.log does NOT pass through journald, so journald collection does
   # not cover it. Present by default only if the audit package was
   # installed BEFORE the Wazuh agent -- otherwise absent.
@@ -352,7 +357,7 @@
   failed_when: false
   when: _ossec_conf.stat.exists
 
-- name: audit | Add the audit.log localfile block to ossec.conf
+- name: Audit | Add the audit.log localfile block to ossec.conf
   # Gated on the grep: adding unconditionally would duplicate the stock
   # block on hosts that already have it, and Wazuh would read the file
   # twice. default('0') guards the skipped-task case.
@@ -371,14 +376,14 @@
     - _wazuh_audit_localfile.stdout | default('0') | int == 0
   register: _wazuh_localfile_added
 
-- name: audit | Restart the Wazuh agent if the collection config changed
+- name: Audit | Restart the Wazuh agent if the collection config changed
   ansible.builtin.systemd:
     name: wazuh-agent
     state: restarted
   when: _wazuh_localfile_added is changed
   register: _wazuh_restart
 
-- name: audit | Verify the Wazuh agent daemons came back up
+- name: Audit | Verify the Wazuh agent daemons came back up
   ansible.builtin.command:
     cmd: /var/ossec/bin/wazuh-control status
   register: _wazuh_status
