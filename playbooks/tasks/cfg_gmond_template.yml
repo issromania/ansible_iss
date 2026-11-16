@@ -1,17 +1,18 @@
 ---
-- name: include cfg_gmond_task.yml
+- name: Include cfg_gmond_task.yml
   ansible.builtin.include_tasks: cfg_gmond_task.yml
 
 - name: Create gmond conf.d dir
   ansible.builtin.file:
     path: /etc/ganglia/conf.d
     state: directory
+    mode: "0755"
 
 - name: Copy generic gmond configuration
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../additions/gmond_conf/conf/gmond.conf"
     dest: /etc/ganglia/
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     backup: true
@@ -53,4 +54,3 @@
     name: gmond
     state: restarted
     enabled: true
-
